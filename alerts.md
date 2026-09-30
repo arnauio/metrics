@@ -4,6 +4,8 @@ Use this to decide what deserves an alert and to set thresholds that catch real 
 
 Rules below are Prometheus alerting rules (`expr`, `for`, `labels`) with illustrative metric names. The logic carries over to any backend.
 
+Calculator for the numbers here: `uv run src/calc.py burn --slo 99.9` (thresholds for any SLO), `poisson`, `wilson` ([analysis.md](analysis.md#formulas)).
+
 ## What to page on
 
 | Signal | Action | Why |
@@ -33,9 +35,17 @@ The SRE Workbook's multiwindow, multi-burn-rate alerts:
 | Page | 6h | 30m | 6× | 5% | 5 days |
 | Ticket | 3d | 6h | 1× | 10% | 30 days |
 
+![Error budget remaining over 30 days at 0.4×, 1×, 6× and 14.4× burn](images/alerts/budget_burn.png)
+
+At 14.4× the budget is gone in 50 hours, at 6× in 5 days, at 1× exactly at the end of the period.
+
 - Fire only when **both** windows exceed the burn rate:
   - long window → the problem is significant;
   - short window (1/12 of the long) → the alert clears soon after the fix.
+![A 2-hour incident at 3% errors: 5-minute and 1-hour error rates against the 14.4× threshold](images/alerts/multiwindow.png)
+
+Simulated 2-hour incident at 3% errors (99.9% SLO). The pair fires 28 minutes in, when the 1-hour rate crosses 1.44%, and clears 2 minutes after the fix. With the 1-hour window alone, it would keep firing for 30 more minutes (hatched).
+
 - Error-rate threshold = burn rate × (1 − target):
   - 99.9% SLO: 1.44%, 0.6%, 0.1%
   - 99.95% SLO: 0.72%, 0.30%, 0.05%
@@ -78,6 +88,10 @@ The example counts server-side 5xx for brevity. Prefer counts from the client or
 | **Rare events** | Any occurrence, on the counter's increase | `increase(disk_errors_total[10m]) > 0` | `counter > 0` stays true forever after the first event |
 | **Dependencies** | Their SLA plus a margin, sustained | Vendor p95 SLA 800 ms → alert above 1 s for 10m | Don't page on a vendor's normal p99 |
 
+![One week of traffic with a time-of-week μ − 3σ band and a single weekly μ − 3σ at −188 req/s](images/alerts/traffic_baseline.png)
+
+Traffic volume: one μ − 3σ over the whole week (μ 199, σ 129) comes out at −188 req/s and can never fire. The time-of-week band, from 6 earlier weeks, sits at about 343 req/s on Tuesday at 2pm and catches the drop to 250. The simulated noise is independent minute to minute, with no week-to-week level changes, so this band is tighter than real history would give; include weeks with real level shifts when you compute yours.
+
 Static vs dynamic thresholds:
 - Dynamic (rolling baselines) adapt to growth, but a degraded week becomes the new normal, and they're harder to debug. Never let a dynamic threshold rise above the load-tested limit.
 - Capacity: prefer static thresholds.
@@ -89,7 +103,8 @@ Low volume → one error is a large error rate (at 600 requests per window, one 
 
 1. **Require enough volume** that the threshold means several errors:
    - minimum requests per window ≈ 5 / threshold rate (at 0.03% → ~17,000);
-   - state when that floor silences the rule (often nights, weekends) and what covers those hours.
+   - state when that floor silences the rule (often nights, weekends) and what covers those hours;
+   - leave headroom above the baseline too: the floor stops one error from firing it, but a threshold close to the baseline still fires by chance. At a 0.02% baseline, a 0.03% threshold (1.5×) trips ~12% of healthy 17,000-request windows, and drops below 1% only from ~120,000 requests.
 2. **Alert on counts, gated to low traffic**, where the expected count is far below the threshold:
 
 ```yaml
@@ -105,6 +120,10 @@ Low volume → one error is a large error rate (at 600 requests per window, one 
 
 - Why it's safe: at a 0.02% baseline and < 3,000 requests per 5 minutes, a window expects ≤ 0.6 errors; 5 or more happen by chance < 0.04% of the time ([Poisson](analysis.md#formulas)).
 - Why the traffic gate: without it, the rule fires all day at normal traffic.
+
+![Chance a healthy window fires vs requests per window, for a 0.03% rate threshold and the gated count rule](images/alerts/low_traffic.png)
+
+On healthy traffic (0.02% errors): the rate threshold fires on single errors at low volume (11% of 600-request windows) and still ~12% of the time at its 16,667-request floor. The count rule stays below 0.04% up to its 3,000-request gate, partly because it's less sensitive (5 errors in 3,000 requests is 0.17%, over 8× the baseline). The curve covers the 5-minute condition only; the 15-minute one makes it lower still. The sawtooth comes from rounding the threshold to whole errors.
 
 ## Durations, windows and false alarms
 
