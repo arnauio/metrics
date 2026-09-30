@@ -155,6 +155,14 @@ Write this table for each journey. Dashboards and impact estimates are built on 
   - Don't assume industry rules of thumb like "100 ms = 1% conversion".
   - Calls the user doesn't wait for (background autosave, prefetch) can't cause abandonment. For those, watch their failures and what they cause instead: unsaved-changes warnings, lost edits, conflicts.
 
+![Journey success C vs the error rate of one critical-path call, with and without a client retry](images/kpis/errors_multiply.png)
+
+With $C = 0.80$, a critical-path call failing 5% of the time takes the journey to 0.76. One client retry (failing only if both tries fail, $e^2$) keeps it at 0.798, but only if the retry fails independently of the first try. During real incidents failures are correlated, so retries help much less.
+
+![Waterfall of a page load: critical-path calls in red, non-critical in grey](images/kpis/critical_path.png)
+
+Illustrative page load: it's usable at 430 ms = 80 (session) + 200 (the slower of two parallel calls) + 150 (blocks, which waits for the document). Both parallel calls block the page, but only the slower one sets the time: `/permissions` has 100 ms of slack. The 600 ms comments call ends later but doesn't delay "usable".
+
 ### 3. Estimate the effect on the KPI
 
 - **Failed journeys** ≈ $A_1$ per hour × drop in $C$ × duration.
