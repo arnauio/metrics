@@ -35,7 +35,7 @@ margin = 1.96 × sqrt(0.0000165 + 0.00000267) / 1.0064 = 0.0085
 ## Sampling noise vs real variation
 
 - **Sampling noise shrinks with volume** as $1/\sqrt{n}$: 100× the traffic → 10× less noise.
-- **Real variation doesn't shrink**: performance fluctuates, traffic mix changes, users behave differently by hour. Past some volume it dominates ([README Part 3](README.md#part-3-real-world-variabilityjitter) shows it with plots).
+- **Real variation doesn't shrink**: performance fluctuates, traffic mix changes, users behave differently by hour. Past some volume it dominates ([flows.md Part 3](flows.md#part-3-real-world-variabilityjitter) shows it with plots).
 - **So measure σ from healthy data.**
   - Example: a login journey at 18,000 attempts per 5 minutes has a binomial SE of 0.2%, but an observed σ of 1.5%.
   - Limits from the SE (μ − 3 × 0.2%) fire constantly; limits from the observed σ (μ − 3 × 1.5%) don't.
@@ -59,7 +59,7 @@ Step ratios ($T_i = A_{i+1}/A_i$) depend on window size $W$ vs the time between 
 - **Spillover** ≈ average gap between the steps ÷ $W$ = share of step-$(i+1)$ requests that started step $i$ in an earlier window.
 - **Steady traffic**: spillover in and out balance → ratio correct on average, just noisier.
 - **Changing traffic**: ratio reads low while traffic ramps up, high (even above 1) while it ramps down. A traffic spike can look like a failure followed by a recovery above 100%.
-- **Rule**: $W$ ≥ 5–10× the average gap for step ratios; ≥ 5–10× the average journey time for end-to-end conversion. Details and plots: [README Part 5](README.md#part-5-window-sizing).
+- **Rule**: $W$ ≥ 5–10× the average gap for step ratios; ≥ 5–10× the average journey time for end-to-end conversion. Details and plots: [flows.md Part 5](flows.md#part-5-window-sizing).
 
 ## Baselines and seasonality
 

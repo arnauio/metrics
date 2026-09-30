@@ -2,7 +2,7 @@
 
 How we add business context to Datadog APM spans for the auth service, how to troubleshoot with it, and what Datadog keeps for how long.
 
-The auth service handles password login, OpenID/OAuth social login, one-time token (OTT) login, where the client polls until the user confirms, device login, and API keys for third-party integrations. The endpoint names below are this doc's; [flows.md](../../flows.md) and [README.md](../../README.md) use their own simplified flows.
+The auth service handles password login, OpenID/OAuth social login, one-time token (OTT) login, where the client polls until the user confirms, device login, and API keys for third-party integrations. The endpoint names below are this doc's; [flows.md](../../flows.md) uses its own simplified flows.
 
 ## Traces and wide events
 

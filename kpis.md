@@ -9,7 +9,7 @@ Used across all four references.
 | Term | Meaning |
 |---|---|
 | Journey | Ordered user steps ending in a visible success (log in, edit and save, publish). Tagged `flow` in metrics. |
-| $A_i(t)$, $T_i(t)$, $C(t)$ | Per time window $t$: arrivals at step $i$; step transition $A_{i+1}/A_i$; journey success rate $A_S/A_1$ ([Level 2](#level-2-journey-kpis)). [README.md](README.md) calls $C(t)$ "conversion"; here *conversion* means only the business KPI (free → paid). |
+| $A_i(t)$, $T_i(t)$, $C(t)$ | Per time window $t$: arrivals at step $i$; step transition $A_{i+1}/A_i$; journey success rate $A_S/A_1$ ([Level 2](#level-2-journey-kpis)). [flows.md](flows.md) calls $C(t)$ "conversion"; here *conversion* means only the business KPI (free → paid). |
 | SLI | Service level indicator: the fraction of good events, e.g. successful requests, requests faster than 500 ms, journeys that succeed. |
 | SLO | Target for an SLI over a period, e.g. "99.9% of requests succeed over 30 days". |
 | Error budget | The bad events an SLO allows: $1 -$ target. Burn rate = how fast it's being used ([alerts.md](alerts.md#slo-burn-rate-alerts)). |
@@ -78,7 +78,7 @@ Outcomes the business cares about. Slow, and driven by much more than reliabilit
 | Journey latency | First step to success, p75 and p95, from RUM or traces | "Is it slow enough that people give up?" |
 | Journey SLI | $\sum_t A_S(t) / \sum_t A_1(t)$ over 30 days | SLO reporting, error budget |
 
-Counters and window sizing: [README.md](README.md) (in depth), [flows.md](flows.md) (introduction).
+Counters and window sizing: [flows.md](flows.md) (introduction, then the math and plots).
 
 Choosing journeys:
 1. Start from each business KPI's key action; list the journeys a user must complete to reach it.

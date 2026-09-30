@@ -187,7 +187,7 @@ Wide events aren't free. Plan for these:
   - *Head sampling* decides when the request starts. It's cheap, but it drops rare errors along with everything else.
   - *Tail sampling* decides after the request ends: keep all errors and slow requests, sample the rest. It needs a buffer, for example the OpenTelemetry Collector's tail sampling processor, and all spans of a trace must reach the same collector instance, so put a trace-ID-aware load-balancing exporter in front.
   - Record the rate on each event (`sample_rate: 20` means "this event stands for 20"), so counts can be re-weighted. Counts from sampled data are estimates.
-- **SLOs and alerts.** Because of sampling, keep the counters that feed SLOs and alerts as metrics: RED counters, or [journey metrics](README.md). Use events to explain what the metrics show.
+- **SLOs and alerts.** Because of sampling, keep the counters that feed SLOs and alerts as metrics: RED counters, or [journey metrics](flows.md). Use events to explain what the metrics show.
 - **Personal data.** `user.id`, `client.address` and emails are personal data. Hash or drop what you don't need, set a retention period, and never record secrets or tokens.
 - **Cardinality.** High-cardinality fields are fine in event storage (columnar stores are built for them). Don't copy them into metric tags ([dashboards.md](dashboards.md#tagging-and-cardinality)).
 - **Across services.** Each service emits its own event for the same request. To follow a request across services, propagate a trace context (W3C `traceparent`) and query by `trace_id`. A richly tagged APM span *is* a wide event ([reference/datadog/apm.md](reference/datadog/apm.md)).
@@ -219,6 +219,6 @@ Events keep every field, so any metric can be computed from them as a query (an 
 
 ## See also
 
-- [README.md](README.md): journey metrics, the cheap counters to alert on.
+- [flows.md](flows.md): journey metrics, the cheap counters to alert on.
 - [reference/datadog/apm.md](reference/datadog/apm.md): the same idea with Datadog APM spans.
 - [dashboards.md](dashboards.md#tagging-and-cardinality): tagging and cardinality.

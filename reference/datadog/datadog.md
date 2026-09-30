@@ -14,7 +14,7 @@ The concepts that apply to any tool are in the references at the repo root ([kpi
 | Statistics, attribution | [analysis.md](../../analysis.md) |
 | APM: span tags, Trace Explorer queries, retention | [apm.md](apm.md) |
 | Wide events | [events.md](../../events.md) |
-| Journey metrics (product-layer SLI) | [README.md](../../README.md) |
+| Journey metrics (product-layer SLI) | [flows.md](../../flows.md) |
 
 ## Dashboards
 
@@ -83,7 +83,7 @@ Metric names are those of the Datadog Kubernetes, AWS and APM integrations; chec
 
 ### Product
 
-- Journey conversion `C(t)` per flow, with control limits ([README.md](../../README.md)).
+- Journey conversion `C(t)` per flow, with control limits ([flows.md](../../flows.md)).
 - SLO status and error budget remaining (Datadog SLO widgets), for the SLOs in [alerts.md](../../alerts.md#slo-burn-rate-alerts).
 
 ## Pricing

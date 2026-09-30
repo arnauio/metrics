@@ -49,7 +49,7 @@ Drill-down: KPI tile (1) → its journey (2) → a step's calls (3) → their de
 | Failing calls per step | Top calls by error count on each step's critical path | Table |
 | Segments | $C$ by platform, client version, region, plan tier | Table or heatmap |
 
-Window size for the ratios follows the journey's timing ([README Part 5](README.md#part-5-window-sizing)).
+Window size for the ratios follows the journey's timing ([flows.md Part 5](flows.md#part-5-window-sizing)).
 
 ### 3. API calls: frontend → backend
 
