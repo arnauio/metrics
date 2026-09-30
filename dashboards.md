@@ -1,18 +1,30 @@
 # Dashboards: what to build
 
-Use this to design dashboards or an observability hub: which dashboards, which panels, which data. Read the KPI tree in [kpis.md](kpis.md) first; the dashboards follow its levels.
+What should we show, and to whom? Which dashboards, panels and data. Read [analysis.md](analysis.md) and the [KPI tree](kpis.md#the-kpi-tree) first; the dashboards follow its levels. Next, [alerts.md](alerts.md): what to page on.
 
-## Principles
+## Rules
 
-- **One level per dashboard** (business, journey, API call, resource), linked top-down. On a mixed dashboard the reader can't tell whether a red panel is a user-facing problem or a cause. Exceptions: the KPI overview (the entry point, levels 1–2) and the changes view (overlays everything).
-- **Every panel answers a question.** Put the question in the panel's subtitle. No question → drop the panel.
-- **Order: status → trend → breakdown.** Current value first, then the time series, then per-endpoint or per-segment detail.
-- **Rates with denominators.** Show error and success *rates* with volume next to them; a count that doubles with traffic isn't an incident.
-- **Percentiles from distributions.** Compute p95 from the histogram of all requests; never average per-host or per-endpoint p95s.
-- **Compare with a baseline**: same window last week, or control limits from healthy data ([alerts.md](alerts.md#threshold-patterns-by-metric-type)).
-- **Change markers on every time series**: deploys, config and feature-flag changes, incidents. One shared time range per dashboard.
-- **Chart hygiene**: at most 3 series per chart; no pie charts; colours everywhere: green healthy · yellow degraded · red failing · grey no data.
-- **Default time ranges**: incident 15 min–4 h · operations 1–24 h · capacity 7–90 days · business KPIs this week and month. Long ranges roll points into coarser buckets and hide short spikes.
+1. **One level per dashboard** (business, journey, API call, resource), linked top-down, because on a mixed one a red panel could be a symptom or a cause. Exceptions: the KPI overview and the changes view ([The dashboard set](#the-dashboard-set)).
+2. **Every panel answers a question**, in its subtitle; no question → drop the panel.
+3. **Order: status → trend → breakdown** (current value, time series, per-endpoint or per-segment detail), so whether anything is wrong comes first.
+4. **Rates with denominators**: show volume next to error and success rates, because a count that doubles with traffic isn't an incident.
+5. **Percentiles from distributions**: p95 from the histogram of all requests, because an average of per-host or per-endpoint p95s isn't a p95.
+6. **Compare with a baseline** (same window last week, or [control limits](alerts.md#threshold-patterns-by-metric-type)), because a value alone isn't high or low.
+7. **Change markers on every time series** (deploys, config and flag changes, incidents), one shared time range per dashboard, because "what changed?" comes first in an incident ([Changes and incidents](#5-changes-and-incidents)).
+8. **Chart hygiene**: at most 3 series per chart; no pie charts; the same colours everywhere: green healthy · yellow degraded · red failing · grey no data.
+9. **Default time ranges**: incident 15 min–4 h · operations 1–24 h · capacity 7–90 days · business KPIs this week and month, because long ranges roll points into coarser buckets and hide short spikes.
+10. **Bounded tags only**, because series count multiplies across tags ([Tagging and cardinality](#tagging-and-cardinality)).
+
+## Tagging and cardinality
+
+A dashboard can only break down by dimensions recorded as tags or fields.
+- **Standard tags**: `service`, `env`, `version`, `region`, plus bounded product dimensions such as `platform`, `plan_tier`, `flow` (the journey).
+- **Bounded tags only**: < ~100 values safe, ~1,000 manageable. Series count = *product* of all tags' value counts, and metrics are usually billed per series.
+- **No IDs as metric tags** (`user_id`, `session_id`, `request_id`, IP addresses) → put them on events or traces ([events.md](events.md#trade-offs)).
+- **Route templates, not paths**: `/api/documents/:id`, not `/api/documents/12345`.
+- **Grouped values**: `status_class:5xx` next to the exact code; `error_type:timeout`, not the error message.
+- **One metric name, many services**: `http.server.request.duration{service:...}`, not a metric per service. Default naming: [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/).
+- **Review monthly**: top metrics by series count; metrics nobody queried in 30 days.
 
 ## The dashboard set
 
@@ -49,7 +61,7 @@ Drill-down: KPI tile (1) → its journey (2) → a step's calls (3) → their de
 | Failing calls per step | Top calls by error count on each step's critical path | Table |
 | Segments | $C$ by platform, client version, region, plan tier | Table or heatmap |
 
-Window size for the ratios follows the journey's timing ([flows.md Part 5](flows.md#part-5-window-sizing)).
+Window size for the ratios follows the journey's timing ([analysis.md](analysis.md#windows)).
 
 ### 3. API calls: frontend → backend
 
@@ -85,7 +97,7 @@ Window size for the ratios follows the journey's timing ([flows.md Part 5](flows
 
 ## Map to your stack
 
-Fill in your own tools. Examples show what each source type usually is.
+Fill in your own tools; the examples are typical per source type.
 
 | Signal | Source type | Examples |
 |---|---|---|
@@ -104,14 +116,3 @@ A static page shows snapshots, not live queries. Per panel:
 - **Fetch pre-aggregated rows** (per window, per endpoint), not raw events → small page.
 - **Link out** to the source tool for drill-down, with the same time range, instead of rebuilding it.
 - **Fetch the baseline with the data** (last week's window next to this one) → comparisons need no second query.
-
-## Tagging and cardinality
-
-A dashboard can only break down by dimensions recorded as tags or fields.
-- **Standard tags**: `service`, `env`, `version`, `region`, plus bounded product dimensions such as `platform`, `plan_tier`, `flow` (the journey).
-- **Bounded tags only**: < ~100 values safe, ~1,000 manageable. Series count = *product* of all tags' value counts, and metrics are usually billed per series.
-- **No IDs as metric tags** (`user_id`, `session_id`, `request_id`, IP addresses) → put them on events or traces ([events.md](events.md#trade-offs)).
-- **Route templates, not paths**: `/api/documents/:id`, not `/api/documents/12345`.
-- **Grouped values**: `status_class:5xx` next to the exact code; `error_type:timeout`, not the error message.
-- **One metric name, many services**: `http.server.request.duration{service:...}`, not a metric per service. Default naming: [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/).
-- **Review monthly**: top metrics by series count; metrics nobody queried in 30 days.

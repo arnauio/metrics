@@ -1,26 +1,18 @@
 # KPIs: what to measure
 
-Use this to choose a product's KPIs and connect each one to the journeys, API calls and resources beneath it. Next: [dashboards.md](dashboards.md) (what to build), [alerts.md](alerts.md) (what to page on), [analysis.md](analysis.md) (is a change real).
+What should we measure? A product's KPIs, and the journeys, API calls and resources beneath each. Read this chapter first; next, [analysis.md](analysis.md): whether a change is real.
 
-## Glossary
+## Rules
 
-Used across all four references.
-
-| Term | Meaning |
-|---|---|
-| Journey | Ordered user steps ending in a visible success (log in, edit and save, publish). Tagged `flow` in metrics. |
-| $A_i(t)$, $T_i(t)$, $C(t)$ | Per time window $t$: arrivals at step $i$; step transition $A_{i+1}/A_i$; journey success rate $A_S/A_1$ ([Level 2](#level-2-journey-kpis)). [flows.md](flows.md) calls $C(t)$ "conversion"; here *conversion* means only the business KPI (free → paid). |
-| SLI | Service level indicator: the fraction of good events, e.g. successful requests, requests faster than 500 ms, journeys that succeed. |
-| SLO | Target for an SLI over a period, e.g. "99.9% of requests succeed over 30 days". |
-| Error budget | The bad events an SLO allows: $1 -$ target. Burn rate = how fast it's being used ([alerts.md](alerts.md#slo-burn-rate-alerts)). |
-| RED / USE | Per request-driven call: Rate, Errors, Duration. Per resource: Utilization, Saturation, Errors. |
-| RUM | Real user monitoring: measurements taken in users' browsers or apps. |
-| p75, p95, p99 | Percentiles: 75%, 95%, 99% of values are below. p75 for user experience (Core Web Vitals), p95/p99 for tails and alerts. |
-| μ, σ | Mean and standard deviation, measured over healthy (baseline) data. |
-| Control limits | μ ± 3σ of a metric in healthy windows; outside = unusual ([alerts.md](alerts.md#threshold-patterns-by-metric-type)). |
-| Points | Percentage points: 80% → 75% is a 5-point drop. |
-| Critical path | The calls a step can't complete without; the user waits for them. |
-| Wide events | One structured event per request with all its context ([events.md](events.md)). |
+1. **Place each KPI at one level**, because the level below explains it ([The KPI tree](#the-kpi-tree)).
+2. **Alert on journeys and API calls; report business KPIs**, because business KPIs lag by days ([The KPI tree](#the-kpi-tree)).
+3. **Pick 3–5 business KPIs, each with a key action**, because each key action becomes a journey ([Level 1](#level-1-business-kpis)).
+4. **Count each step once per attempt**, because repeats can push success above 100% ([Level 2](#level-2-journey-kpis)).
+5. **Keep journeys short**, because success rates need windows several times longer than the journey ([Level 2](#level-2-journey-kpis)).
+6. **SLIs from the client or edge, diagnosis from the server**, because the server never sees requests that fail before reaching it ([Measure where the user is](#measure-where-the-user-is)).
+7. **Decide per endpoint what counts as an error**, because many 4xx are expected user outcomes ([What counts as an error](#what-counts-as-an-error)).
+8. **Mark each step's critical-path calls**, because only they can break the journey ([Map it](#1-map-it)).
+9. **Verify impact estimates against the KPI**, because an estimate is a hypothesis ([Verify with data](#4-verify-with-data)).
 
 ## The KPI tree
 
@@ -34,20 +26,15 @@ Level 3  API call SLIs      rate, errors, latency per call, as users see them mi
 Level 4  Resources          database, workers, queues, caches, third parties  seconds-minutes
 ```
 
-- Each KPI sits at one level; the level below explains it.
-- Business KPI moved but no journey KPI did → not a reliability problem (look at product changes, marketing, seasonality).
-- Journey KPIs are the link: fast enough to alert on, meaningful to the business. Business KPIs are too slow and noisy to alert on; API calls mean little to the business alone.
-
-| Level | Reacts in | Use for |
-|---|---|---|
-| 1 Business KPIs | Days–weeks | Reporting, prioritisation, sizing incident impact |
-| 2 Journey KPIs | Minutes | Alerts, SLOs, incident impact |
-| 3 API call SLIs | Minutes | Alerts, diagnosis |
-| 4 Resources | Seconds–minutes | Diagnosis, capacity |
+- A business KPI that moved while no journey KPI did is not a reliability problem: look at product changes, marketing, seasonality.
+- Journey KPIs are the bridge: they lead (react in minutes) and still mean something to the business. Use them for alerts, SLOs and incident impact.
+- Business KPIs lag (days to weeks) and are too noisy to alert on → reporting, prioritisation, sizing incident impact.
+- API call SLIs lead but mean little to the business alone → alerts and diagnosis.
+- Resources → diagnosis and capacity.
 
 ## Level 1: Business KPIs
 
-Outcomes the business cares about. Slow, and driven by much more than reliability.
+Outcomes the business cares about.
 
 | KPI | Definition | Typical window |
 |---|---|---|
@@ -58,17 +45,20 @@ Outcomes the business cares about. Slow, and driven by much more than reliabilit
 | Retention | Share of a cohort still active N weeks later; churn is the inverse | Weekly, monthly |
 | Revenue | Recurring revenue, expansion, contraction | Monthly |
 
-- Pick 3–5.
+- Pick 3–5: few enough that each gets its own key action and journey.
 - For each, name its **key action**: what a user must do for the KPI to move ("published their first site", "invited a teammate"). The key action is a journey (level 2).
 - Segment only by bounded dimensions: plan tier, platform or client, region, new vs returning.
 
 ## Level 2: Journey KPIs
 
-- **Journey**: ordered user steps ending in a visible success. Examples: sign up, log in, load the app, edit and save, publish, view a page, search, pay.
-- Each step is backed by one or more API calls.
-- Notation, per time window $t$: $A_i(t)$ = requests arriving at step $i$; step $S$ = the success step (count only successful requests there).
-- **Count each step once per attempt.** Calls that repeat within one attempt (autosave sends many `PUT`s per document open; polling; client retries) inflate $A_i$ and can push $C$ above 1. For those steps, count a once-per-attempt signal instead: the first successful save per edit session, or a "saved" event.
-- **Keep journeys short.** $C(t)$ needs windows 5–10× the journey's average duration ([analysis.md](analysis.md#windows)). An editing session of tens of minutes would need hour-long windows → a slow signal. Split it into short journeys (open → editable; save → saved) and alert on those.
+A **journey** is ordered user steps ending in a visible success: sign up, log in, load the app, edit and save, publish, view a page, search, pay. Each step is backed by one or more API calls. Tagged `flow` in metrics.
+
+Choosing journeys:
+1. Start from each business KPI's key action; list the journeys a user must complete to reach it.
+2. Rank by traffic × business value. Login and "load the main screen" usually come first, because every other journey depends on them.
+3. Start with 3–5, and map each one to its calls ([Map it](#1-map-it)).
+
+Notation, per time window $t$: $A_i(t)$ = requests arriving at step $i$; step $S$ = the success step (count only successful requests there).
 
 | KPI | Formula | Answers |
 |---|---|---|
@@ -78,12 +68,8 @@ Outcomes the business cares about. Slow, and driven by much more than reliabilit
 | Journey latency | First step to success, p75 and p95, from RUM or traces | "Is it slow enough that people give up?" |
 | Journey SLI | $\sum_t A_S(t) / \sum_t A_1(t)$ over 30 days | SLO reporting, error budget |
 
-Counters and window sizing: [flows.md](flows.md) (introduction, then the math and plots).
-
-Choosing journeys:
-1. Start from each business KPI's key action; list the journeys a user must complete to reach it.
-2. Rank by traffic × business value. Login and "load the main screen" usually come first, because every other journey depends on them.
-3. Start with 3–5. For each, write: ordered steps, the API call(s) behind each step, what counts as success.
+- **Count each step once per attempt.** Autosave sends many `PUT`s per document open; clients poll and retry. Counted per request, these inflate $A_i$ and can push $C$ above 1. Count a once-per-attempt signal instead: the first successful save per edit session, or a "saved" event.
+- **Keep journeys short**: $C(t)$ needs windows 5–10× the journey's duration ([analysis.md](analysis.md#windows); deep dive in [flows.md Part 5](flows.md#part-5-window-sizing)), so split a long editing session into short journeys (open → editable; save → saved) and alert on those.
 
 ## Level 3: API call SLIs
 
@@ -97,7 +83,7 @@ RED per call: **R**ate, **E**rror rate, **D**uration (p50, p95, p99).
 | **Edge / CDN** | Every request that reaches you; status; edge vs origin time; cache hits | Failures before the edge; what happens inside the origin |
 | **Server** (traces, logs, APM) | Handler time, errors, dependency calls | Queueing before the server, network, the client |
 
-- SLIs from the client or edge; diagnosis from the server.
+- Take SLIs from the client or edge; diagnose from the server.
 - The client–server gap is a signal: client errors the server never logged, or client latency far above server latency → likely a network, edge or frontend problem.
 
 ### What counts as an error
@@ -129,13 +115,11 @@ USE per resource: **U**tilization, **S**aturation, **E**rrors.
 | Caches | Hit rate, evictions |
 | Third-party APIs | Their RED |
 
-Resources explain level 3; they're rarely KPIs themselves.
-
 ## Connecting the levels: how an API call affects a KPI
 
 ### 1. Map it
 
-Write this table for each journey. Dashboards and impact estimates are built on it.
+Write this table for each journey; dashboards and impact estimates are built on it.
 
 | Journey | Step | API call(s) | Critical path? | Success = |
 |---|---|---|---|---|
@@ -172,7 +156,7 @@ Illustrative page load: it's usable at 430 ms = 80 (session) + 200 (the slower o
 
 ### 4. Verify with data
 
-An estimate is a hypothesis. Check it against the KPI with the [attribution recipe](analysis.md#did-it-move-the-kpi-an-attribution-recipe): like-with-like baseline, a control segment, confounders, sizing.
+Check the estimate against the KPI with the [attribution recipe](analysis.md#did-it-move-the-kpi-an-attribution-recipe): like-with-like baseline, a control segment, confounders, sizing.
 
 ## KPI definition checklist
 
@@ -184,6 +168,22 @@ Write down for every KPI:
 - [ ] **Segments**, bounded (plan, platform, region)
 - [ ] **Target or baseline**, from observed data
 - [ ] **Owner**
+
+## Glossary
+
+| Term | Meaning |
+|---|---|
+| Journey, $A_i(t)$, $T_i(t)$, $C(t)$ | Defined in [Level 2](#level-2-journey-kpis). [flows.md](flows.md) calls $C(t)$ "conversion"; here *conversion* means only the business KPI (free → paid). |
+| SLI | Service level indicator: the fraction of good events, e.g. successful requests, requests faster than 500 ms, journeys that succeed. |
+| SLO | Target for an SLI over a period, e.g. "99.9% of requests succeed over 30 days". |
+| Error budget | The bad events an SLO allows: $1 -$ target. Burn rate = how fast it's being used ([alerts.md](alerts.md#slo-burn-rate-alerts)). |
+| RUM | Real user monitoring: measurements taken in users' browsers or apps. |
+| p75, p95, p99 | Percentiles: 75%, 95%, 99% of values are below. p75 for user experience (Core Web Vitals), p95/p99 for tails and alerts. |
+| μ, σ | Mean and standard deviation, measured over healthy (baseline) data. |
+| Control limits | μ ± 3σ of a metric in healthy windows; outside = unusual ([alerts.md](alerts.md#threshold-patterns-by-metric-type)). |
+| Points | Percentage points: 80% → 75% is a 5-point drop. |
+| Critical path | The calls a step can't complete without; the user waits for them. |
+| Wide events | One structured event per request with all its context ([events.md](events.md)). |
 
 ## References
 

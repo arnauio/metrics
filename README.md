@@ -4,7 +4,7 @@ Guides for choosing KPIs, building dashboards, setting alerts and analysing inci
 
 ## Using this repo with an agent
 
-Point the agent at this repo (a local path or its URL) and tell it to start with [AGENTS.md](AGENTS.md). That file routes each task (choose KPIs, design dashboards, set an alert, check whether a change is real, triage an incident) to the sections to read, lists the tools, and sets the rules for applying the guides to a real system. Claude Code picks it up automatically inside the repo through [CLAUDE.md](CLAUDE.md).
+Point the agent at this repo (local path or URL) and tell it to start with [AGENTS.md](AGENTS.md). It routes each task (choose KPIs, design dashboards, set an alert, check whether a change is real, triage an incident) to the sections to read, lists the tools, and sets the rules for applying the guides to a real system. Inside the repo, Claude Code loads it automatically through [CLAUDE.md](CLAUDE.md).
 
 Example:
 
@@ -15,23 +15,18 @@ Fill in templates/kpi-map.yaml from our code and tools; mark unknowns instead of
 Show me the filled map and the plan before building anything.
 ```
 
-## Docs
+## Read in this order
 
-**References**: compact and tool-agnostic, meant to be applied (by people or by an agent).
+One question runs through the guide: **is the product working for users right now, and if not, what broke and did it matter?** Each file is a chapter that opens with its rules, then explains them.
 
-| Doc | Use it for |
-|---|---|
-| [kpis.md](kpis.md) | Choosing KPIs, from business outcomes down to user journeys, API calls and resources, and how an API call affects a KPI. Starts with a glossary. |
-| [dashboards.md](dashboards.md) | Which dashboards to build, their panels, data sources, tagging. |
-| [alerts.md](alerts.md) | What to page on, SLO burn rates, thresholds by metric type, low traffic. |
-| [analysis.md](analysis.md) | Whether a change is real, and whether it moved a KPI: formulas, noise, windows, attribution. |
-| [events.md](events.md) | Wide events: one rich event per request instead of many log lines. |
-
-**Explanation**: the reasoning, with plots.
-
-| Doc | What it covers |
-|---|---|
-| [flows.md](flows.md) | Journey metrics: a story-first introduction built up from a login flow, then the math, 21 plots, window sizing, and a worked OAuth2 example. |
+| # | Chapter | Answers |
+|---|---|---|
+| 1 | [kpis.md](kpis.md) | What to measure: the KPI tree from business outcomes down to journeys, API calls and resources, and how an API call affects a KPI |
+| 2 | [analysis.md](analysis.md) | How to read the numbers honestly: noise vs real variation, intervals, windows, baselines, and whether a change moved a KPI |
+| 3 | [dashboards.md](dashboards.md) | What to show: the dashboard set, panels, tagging, data sources |
+| 4 | [alerts.md](alerts.md) | What to page on: SLO burn rates, thresholds by metric type, low traffic |
+| 5 | [events.md](events.md) | How to explain what the metrics show: wide events, sampling, trade-offs |
+| 6 | [flows.md](flows.md) | Advanced: journey metrics worked out in depth, with request counters, window sizing, 21 plots and an OAuth2 case study |
 
 **Tool-specific**: [reference/datadog/](reference/datadog/datadog.md): Datadog dashboards and pricing, and APM enrichment for a Java service.
 
@@ -49,7 +44,7 @@ uv run src/calc.py --help    # burn-rate thresholds, Wilson intervals, z-tests, 
 uv run src/check.py          # verify links, anchors, doc numbers and plot reproducibility before committing
 ```
 
-On the first run, uv creates `.venv` and installs the dependencies from `pyproject.toml` (numpy, matplotlib; Python 3.10+). Every plot is seeded, so reruns produce identical images.
+On the first run, uv creates `.venv` and installs the dependencies from `pyproject.toml` (numpy, matplotlib; Python 3.10+). Plots are seeded, so reruns produce identical images.
 
 | Script | Plots for | Images |
 |---|---|---|

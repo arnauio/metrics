@@ -1,16 +1,18 @@
 # Wide events guide
 
-Wide events are an observability pattern where you capture **all the context** about a unit of work (like an HTTP request) in a **single event**, rather than scattering it across multiple log lines.
+Metrics detect that something is wrong; wide events explain why. A wide event captures **all the context** about a unit of work (like an HTTP request) in a **single event**, rather than scattering it across log lines. Chapter 5; read [alerts.md](alerts.md) first. Next, [flows.md](flows.md), the advanced chapter on journey metrics.
 
-> **AI Usage:** Some examples in this guide were generated with AI assistance to illustrate concepts. The patterns and approaches are based on real observability practices. Always validate with your own context.
+> **AI usage:** some examples were generated with AI assistance; validate them against your own context.
 
-## References
+## Rules
 
-- [A Practitioner's Guide to Wide Events](https://jeremymorrell.dev/blog/a-practitioners-guide-to-wide-events/) by Jeremy Morrell
-- [Canonical Log Lines](https://brandur.org/canonical-log-lines) by Brandur Leach
-- [All you need is wide events, not metrics](https://isburmistrov.substack.com/p/all-you-need-is-wide-events-not-metrics) by Ivan Burmistrov
-- [Logging Sucks](https://loggingsucks.com/)
-- [Observability Wide Events 101](https://boristane.com/blog/observability-wide-events-101/) by Boris Tane
+1. **One unit of work = one event** (an HTTP request, a background job, an async task), because scattered lines can't be tied together ([why](#the-traditional-way-multiple-log-lines)).
+2. **Emit once, at the end**: create it in middleware, let handlers add fields, emit it in a `finally` so errors are included; with OpenTelemetry it's the request's local root span ([example](#the-wide-event-way-one-event)).
+3. **Add the context you'd query** (user and tenant, service metadata, timings, feature flags, error details, resource usage), because the next incident will need a field you didn't think of; mind personal data and cost ([trade-offs](#trade-offs)).
+4. **Structure for machines, with one schema across services**, because every field must be a dimension to `GROUP BY` or filter on ([schema](#the-wide-event-way-one-event)).
+5. **Always emit `error` and `error.expected`**, because a filter on a missing field silently drops events ([fields](#the-wide-event-way-one-event)).
+6. **Compare error rates, not counts**, because a version's count grows with its traffic ([queries](#common-queries)).
+7. **Keep SLO and alert counters as metrics**, because events get sampled; use events to explain what the metrics show ([trade-offs](#trade-offs)).
 
 ## The traditional way: multiple log lines
 
@@ -26,7 +28,7 @@ Wide events are an observability pattern where you capture **all the context** a
 
 ## The wide event way: one event
 
-Instead of multiple lines, we emit **one event per request**, when it finishes, carrying everything we learned while handling it:
+Instead, emit **one event per request** when it finishes, carrying everything learned while handling it:
 
 ```json
 {
@@ -75,9 +77,7 @@ Field names follow [OpenTelemetry semantic conventions](https://opentelemetry.io
 - **`main: true`** marks the one event per request that carries the full context (Morrell calls it the "main" event). Other events or spans for the same request share its `trace_id`.
 - **`trace_id` / `span_id`** tie this event to the other services the request touched (see [Trade-offs](#trade-offs)).
 - **`duration_ms`** is the whole request. The `*.duration_ms` fields break it down.
-- **`error` and `error.expected`** are on every event, `false` when nothing went wrong. Always emit them: a filter like `error.expected = false` silently drops events where the field is missing.
-
----
+- **`error` and `error.expected`** are on every event, `false` when nothing went wrong, so a filter like `error.expected = false` drops none.
 
 ## Example 1: successful login
 
@@ -96,8 +96,6 @@ Everything in that timeline ends up in the event above: one row, queryable on an
 - "Show me all logins from premium users": `user.tier = premium`
 - "Which auth methods are slowest?": `P99(duration_ms)` grouped by `auth.method`
 - "What's the p99 for password verification?": `P99(auth.duration_ms)` where `auth.method = password`
-
----
 
 ## Example 2: failed login (rate limited)
 
@@ -139,9 +137,7 @@ offset   duration  step
 What the event tells you:
 - **No `user.*` fields.** The request was rejected before we looked the user up. Absent fields are information too.
 - **A script, not a browser.** `user_agent.original` is `python-requests`. That could be a bot or a legitimate API client; group rate-limited requests by `client.address` to tell a single noisy client from a distributed attack.
-- **`error: true` but `error.expected: true`.** The request failed, but as designed. Decide explicitly how expected errors count: usually they're excluded from availability SLOs (a 429 means the rate limiter works) but tracked on their own, because a surge in them is still worth knowing about.
-
----
+- **`error: true` but `error.expected: true`.** The request failed, but as designed. Decide explicitly how expected errors count ([kpis.md](kpis.md#what-counts-as-an-error)): usually they're excluded from availability SLOs (a 429 means the rate limiter works) but tracked on their own, because a surge in them is still worth knowing about.
 
 ## Common queries
 
@@ -173,21 +169,19 @@ GROUP BY  service.version
 ```
 
 Notes:
-- **Rates need a denominator.** A new version gets more traffic as it rolls out, so its error *count* grows even if it's healthy. Compare error rates, over the same time period, with the `COUNT` next to them to see how much traffic each version has.
+- **Rates need a denominator** ([analysis.md](analysis.md#pitfalls)). A rolling-out version's error *count* grows with its traffic even if it's healthy. Compare rates over the same period, with `COUNT` next to them for each version's traffic.
 - **Don't guess which attribute matters.** The third query only checks one flag. To find which attribute explains slow requests, select the slow region of the heatmap and let the tool compare every field's values inside vs outside it: Honeycomb calls this **BubbleUp**; Datadog's closest equivalent is **Watchdog Insights** in Log/Trace Explorer.
-
----
 
 ## Trade-offs
 
-Wide events aren't free. Plan for these:
+Wide events aren't free:
 
 - **Cost.** Every event is stored whole, so cost grows with volume × width. Metrics are aggregated when they're written, so they stay cheap as traffic grows, as long as their tags stay bounded.
 - **Sampling.** At high volume you'll keep only some events.
   - *Head sampling* decides when the request starts. It's cheap, but it drops rare errors along with everything else.
   - *Tail sampling* decides after the request ends: keep all errors and slow requests, sample the rest. It needs a buffer, for example the OpenTelemetry Collector's tail sampling processor, and all spans of a trace must reach the same collector instance, so put a trace-ID-aware load-balancing exporter in front.
   - Record the rate on each event (`sample_rate: 20` means "this event stands for 20"), so counts can be re-weighted. Counts from sampled data are estimates.
-- **SLOs and alerts.** Because of sampling, keep the counters that feed SLOs and alerts as metrics: RED counters, or [journey metrics](flows.md). Use events to explain what the metrics show.
+- **SLOs and alerts.** Feed them from metrics (RED counters, or [journey metrics](flows.md)), not sampled events.
 - **Personal data.** `user.id`, `client.address` and emails are personal data. Hash or drop what you don't need, set a retention period, and never record secrets or tokens.
 - **Cardinality.** High-cardinality fields are fine in event storage (columnar stores are built for them). Don't copy them into metric tags ([dashboards.md](dashboards.md#tagging-and-cardinality)).
 - **Across services.** Each service emits its own event for the same request. To follow a request across services, propagate a trace context (W3C `traceparent`) and query by `trace_id`. A richly tagged APM span *is* a wide event ([reference/datadog/apm.md](reference/datadog/apm.md)).
@@ -196,29 +190,16 @@ Wide events aren't free. Plan for these:
 
 Events keep every field, so any metric can be computed from them as a query (an estimate, if the events are sampled), and wide events can replace many custom metrics. Tools built around this include Honeycomb (its own columnar store) and ClickHouse-based tools such as SigNoz and HyperDX, usually with OpenTelemetry for collection. Metrics still win for cheap, unsampled, long-retention counters. The same tagging principles apply to both.
 
----
-
-## Key principles
-
-1. **One unit of work = one event**
-   - HTTP request/response = 1 event
-   - Background job = 1 event
-   - Async task = 1 event
-
-2. **Emit once, at the end**
-   - Create the event when the request starts (middleware), let handlers add fields as they learn them, and emit it when the request finishes, including on errors (in a `finally`).
-   - With OpenTelemetry, the event is the request's local root span: add attributes to it instead of logging lines.
-
-3. **Add the context you'd query**
-   - User and tenant info, service metadata, timings, feature flags, error details, resource usage.
-   - Be generous (the next incident will need a field you didn't think of), but mind personal data and cost.
-
-4. **Structure for machines, not humans**
-   - Optimize for queryability, not "pretty" logs.
-   - Use one schema across services, so every field is a dimension to `GROUP BY` or filter on `WHERE`.
-
 ## See also
 
 - [flows.md](flows.md): journey metrics, the cheap counters to alert on.
 - [reference/datadog/apm.md](reference/datadog/apm.md): the same idea with Datadog APM spans.
 - [dashboards.md](dashboards.md#tagging-and-cardinality): tagging and cardinality.
+
+## References
+
+- [A Practitioner's Guide to Wide Events](https://jeremymorrell.dev/blog/a-practitioners-guide-to-wide-events/) by Jeremy Morrell
+- [Canonical Log Lines](https://brandur.org/canonical-log-lines) by Brandur Leach
+- [All you need is wide events, not metrics](https://isburmistrov.substack.com/p/all-you-need-is-wide-events-not-metrics) by Ivan Burmistrov
+- [Logging Sucks](https://loggingsucks.com/)
+- [Observability Wide Events 101](https://boristane.com/blog/observability-wide-events-101/) by Boris Tane
