@@ -1,22 +1,17 @@
-"""Generate the example plots used in README.md.
+"""Plots for flows.md (journey metrics).
 
-Run with `uv run src/metrics_demo.py` from anywhere in the repo. Plots are
-written to `images/` at the repo root. Every plot uses its own seeded random
-generator, so reruns produce identical images.
+Run all plots with `uv run src/plots.py` from the repo root. Plots are written
+to `images/`. Every plot uses its own seeded random generator, so reruns
+produce identical images.
 """
 import math
 from dataclasses import dataclass
-from pathlib import Path
 from typing import List, Tuple
 
-import matplotlib
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-IMAGES = Path(__file__).resolve().parent.parent / "images"
-SEED = 42
+from common import IMAGES, SEED, save, simulate_window
 
 
 @dataclass
@@ -43,18 +38,6 @@ class FlowScenario:
 		return math.prod(self.transitions)
 
 
-def simulate_window(A1: int, transitions: List[float], jitter: float, rng: np.random.Generator) -> float:
-	"""Simulate one window and return C(t) = A_S / A_1.
-
-	Each T_i is drawn uniformly from T_i ± jitter. The jitter is narrowed near 0
-	and 1 so it stays symmetric and the mean stays at T_i. Arrivals at the next
-	step are Binomial(A_i, T_i), so volume sets how much sampling noise there is.
-	"""
-	A = A1
-	for T in transitions:
-		half = min(jitter, T, 1.0 - T)
-		A = rng.binomial(A, rng.uniform(T - half, T + half))
-	return A / A1
 
 
 @dataclass
@@ -121,10 +104,6 @@ def volume_aware_limits(volumes: np.ndarray, C: np.ndarray, baseline_length: int
 	return p, sigma
 
 
-def save(filename: str) -> None:
-	plt.tight_layout()
-	plt.savefig(IMAGES / filename, dpi=150, metadata={"Software": None})
-	plt.close()
 
 
 def label_bars(bars, fmt: str, offset: float = 0.0, **kwargs) -> None:
@@ -377,7 +356,7 @@ def plot13_window_size_spike(p_success: float = 0.9, filename: str = "plot13.png
 	save(filename)
 
 
-if __name__ == "__main__":
+def main() -> None:
 	IMAGES.mkdir(exist_ok=True)
 
 	# Part 1: deterministic example flows
@@ -448,3 +427,7 @@ if __name__ == "__main__":
 		Simulation(oauth_healthy, 20, oauth_t4_drop, 20, jitter=0.02),
 		5, "plot20.png", "OAuth2: Token validation issues (T4: 0.99 → 0.90)",
 	)
+
+
+if __name__ == "__main__":
+	main()
