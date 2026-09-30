@@ -4,6 +4,8 @@ Use this when a metric moved and you need to know: is it real, what caused it, d
 
 ## Formulas
 
+Compute these with `uv run src/calc.py` (`wilson`, `ztest`, `samples`, `poisson`, `spillover`; `--help` for usage).
+
 | Need | Formula | Note |
 |---|---|---|
 | Noise of a rate | $SE = \sqrt{p(1-p)/n}$; 95% range ≈ $p ± 1.96\,SE$ | Only sampling noise. Real systems vary more (below). |
@@ -32,10 +34,18 @@ margin = 1.96 × sqrt(0.0000165 + 0.00000267) / 1.0064 = 0.0085
 - Read the width: with 600 requests you know "around 0.5–2%", not "1%".
 - 1 error in 2 requests = "50%", interval 9%–91% → tells you almost nothing.
 
+![95% interval for an observed 1% error rate vs requests, simple vs Wilson](images/analysis/wilson_vs_simple.png)
+
+For an observed 1% rate, the simple interval goes below 0% under ~380 requests; Wilson stays positive and is wider on the high side.
+
 ## Sampling noise vs real variation
 
 - **Sampling noise shrinks with volume** as $1/\sqrt{n}$: 100× the traffic → 10× less noise.
 - **Real variation doesn't shrink**: performance fluctuates, traffic mix changes, users behave differently by hour. Past some volume it dominates ([flows.md Part 3](flows.md#part-3-real-world-variabilityjitter) shows it with plots).
+![σ of C(t) vs requests per window: sampling noise only vs with real variation](images/analysis/noise_vs_variation.png)
+
+Simulated journey with $C ≈ 0.73$. Without real variation, σ falls as $1/\sqrt{n}$ (0.048 at 100 requests, 0.0005 at 1M). With each step varying ±0.05 per window, σ stays around 0.042 from ~1,000 requests on.
+
 - **So measure σ from healthy data.**
   - Example: a login journey at 18,000 attempts per 5 minutes has a binomial SE of 0.2%, but an observed σ of 1.5%.
   - Limits from the SE (μ − 3 × 0.2%) fire constantly; limits from the observed σ (μ − 3 × 1.5%) don't.
@@ -47,11 +57,15 @@ margin = 1.96 × sqrt(0.0000165 + 0.00000267) / 1.0064 = 0.0085
 ## σ thresholds and what they promise
 
 - Normal data, one-sided: 2.3% of healthy points exceed μ + 2σ; 0.13% exceed μ + 3σ.
-- Latency, error counts and traffic are usually skewed or seasonal → the real exceedance rate is higher. Check thresholds against history; don't trust the formula.
+- Latency, error counts and traffic are usually skewed or seasonal → the real exceedance rate can be far from the formula's (usually higher). Check thresholds against history; don't trust the formula.
 - Latency example: mean 78 ms, σ 156 ms → μ + 3σ = 546 ms.
   - The formula promises 0.13% above it.
   - The real distribution (p99 450 ms, p99.9 1,200 ms) puts ~0.5% above it.
   - → Use percentiles for skewed metrics.
+
+![Histogram of a skewed latency sample with mean, μ + 3σ, p95, p99 and p99.9](images/analysis/skewed_latency.png)
+
+A simulated lognormal sample (median 45 ms, mean 71 ms, σ 89 ms): μ + 3σ = 339 ms, with 1.72% of requests above it, 13× the 0.13% the formula promises for normal data.
 
 ## Windows
 
@@ -89,6 +103,10 @@ Example question: "After Tuesday's deploy, the p95 of `PUT /documents/:id` went 
 ## Correlation isn't causation
 
 - Two metrics that both follow daily traffic correlate strongly without affecting each other. So correlate within the same hour, or on residuals after removing seasonality.
+![CPU vs latency: r = 0.94 on raw values, r = −0.04 after removing the daily pattern](images/analysis/correlation_trap.png)
+
+Simulated week: CPU and latency both follow daily traffic with independent noise. Raw r = 0.94; after subtracting each metric's usual value for that time of day, r = −0.04. Here traffic is identical every day, so removing the daily profile removes the shared cause completely. With real day-to-day variation some correlation remains; compare within the same hour too, or against a control.
+
 - A correlation narrows the search; it doesn't name the cause. Confirm with a control, a before/after at the change point, or a revert.
 
 ## Pitfalls
