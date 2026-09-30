@@ -24,12 +24,22 @@ Guides for choosing KPIs, building dashboards, setting alerts and analysing inci
 
 Journey metrics build on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and on [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google).
 
-## Refresh visualizations
+## Plots and calculator
 
 Requires [uv](https://docs.astral.sh/uv/). From the repo root:
 
 ```sh
-uv run src/metrics_demo.py
+uv run src/plots.py          # regenerate every plot
+uv run src/calc.py --help    # burn-rate thresholds, Wilson intervals, z-tests, sample sizes, Poisson tails, spillover
 ```
 
-On the first run, uv creates `.venv` and installs the dependencies from `pyproject.toml` (numpy, matplotlib; Python 3.10+). The plots are written to `images/` and used in [flows.md](flows.md). Every plot is seeded, so reruns produce identical images.
+On the first run, uv creates `.venv` and installs the dependencies from `pyproject.toml` (numpy, matplotlib; Python 3.10+). Every plot is seeded, so reruns produce identical images.
+
+| Script | Plots for | Images |
+|---|---|---|
+| [src/flows_plots.py](src/flows_plots.py) | [flows.md](flows.md) | `images/plot*.png` |
+| [src/kpis_plots.py](src/kpis_plots.py) | [kpis.md](kpis.md) | `images/kpis/` |
+| [src/alerts_plots.py](src/alerts_plots.py) | [alerts.md](alerts.md) | `images/alerts/` |
+| [src/analysis_plots.py](src/analysis_plots.py) | [analysis.md](analysis.md) | `images/analysis/` |
+
+Shared helpers (paths, seeding, saving, the journey simulation) are in [src/common.py](src/common.py). [src/calc.py](src/calc.py) uses the standard library only.

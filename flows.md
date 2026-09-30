@@ -299,7 +299,7 @@ Interpretation:
 - $C(t)$ is a single SLI-style number that captures the whole journey.
 - You still keep normal per-endpoint SLIs (success rate, latency); $C(t)$ sits on top as the flow SLI.
 
-See [src/metrics_demo.py](src/metrics_demo.py) for code that generates the example plots ([how to regenerate them](README.md#refresh-visualizations)).
+See [src/flows_plots.py](src/flows_plots.py) for code that generates the example plots ([how to regenerate them](README.md#plots-and-calculator)).
 
 ---
 
