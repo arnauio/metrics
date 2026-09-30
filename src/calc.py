@@ -2,6 +2,7 @@
 
   uv run src/calc.py burn --slo 99.9
   uv run src/calc.py wilson 6 600
+  uv run src/calc.py wilson 9 1200 --baseline 0.002   # vs a known normal rate
   uv run src/calc.py ztest 120 10000 150 10000
   uv run src/calc.py samples --p 0.01 --e 0.005
   uv run src/calc.py poisson --expected 0.12 --k 5
@@ -56,7 +57,20 @@ def wilson(args: argparse.Namespace) -> tuple:
 		f"Wilson interval:  [{low:.2%}, {high:.2%}]",
 		f"simple interval:  [{p - args.z * se:.2%}, {p + args.z * se:.2%}]  (can go below 0 at small n)",
 	]
-	return {"x": args.x, "n": args.n, "z": args.z, "rate": p, "wilson": [low, high], "simple": [p - args.z * se, p + args.z * se]}, lines
+	result = {"x": args.x, "n": args.n, "z": args.z, "rate": p, "wilson": [low, high], "simple": [p - args.z * se, p + args.z * se]}
+	if getattr(args, "baseline", None) is not None:
+		expected = args.n * args.baseline
+		inside = low <= args.baseline <= high
+		higher = poisson_tail(expected, args.x)
+		lower = 1 - poisson_tail(expected, args.x + 1)
+		lines += [
+			f"baseline {args.baseline:.4%}: expected {expected:.3g} of {args.n}, observed {args.x} ({args.x - expected:+.3g})",
+			f"baseline {'inside' if inside else 'outside'} the interval → {'consistent with sampling noise' if inside else 'unlikely to be sampling noise alone'}",
+			f"Poisson: P(≥ {args.x} | expected {expected:.3g}) = {higher:.3g}, P(≤ {args.x}) = {lower:.3g}",
+			CAVEAT_ZTEST,
+		]
+		result["baseline"] = {"rate": args.baseline, "expected": expected, "extra": args.x - expected, "inside_interval": inside, "p_at_least_observed": higher, "p_at_most_observed": lower}
+	return result, lines
 
 
 def ztest(args: argparse.Namespace) -> tuple:
@@ -87,13 +101,19 @@ def samples(args: argparse.Namespace) -> tuple:
 	return {"p": args.p, "margin": args.e, "z": args.z, "min_n": n}, lines
 
 
+def poisson_tail(lam: float, k: int) -> float:
+	"""P(X ≥ k) for X ~ Poisson(lam), summed in log space so large means don't overflow."""
+	if k <= 0:
+		return 1.0
+	below = sum(math.exp(-lam + i * math.log(lam) - math.lgamma(i + 1)) for i in range(k))
+	return 1 - min(below, 1.0)
+
+
 def poisson(args: argparse.Namespace) -> tuple:
 	lam = args.expected
 	if lam <= 0 or args.k < 0:
 		raise SystemExit("--expected must be > 0 and --k >= 0")
-	# Sum the terms in log space so large means don't overflow.
-	below = sum(math.exp(-lam + i * math.log(lam) - math.lgamma(i + 1)) for i in range(args.k))
-	tail = 1 - min(below, 1.0)
+	tail = poisson_tail(lam, args.k)
 	lines = [f"expected {lam:g}, P(X ≥ {args.k}) = {tail:.3g} ({tail * 100:.3g}%)"]
 	return {"expected": lam, "k": args.k, "p_at_least_k": tail}, lines
 
@@ -125,44 +145,48 @@ def tidy(value):
 def main() -> None:
 	parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 	parser.add_argument("--json", action="store_true", help="print the result as JSON")
+	common = argparse.ArgumentParser(add_help=False)
+	common.add_argument("--json", dest="json_sub", action="store_true", help="print the result as JSON")
 	sub = parser.add_subparsers(required=True)
+	add = lambda name, help: sub.add_parser(name, help=help, parents=[common])
 
-	p = sub.add_parser("burn", help="burn-rate thresholds for an SLO (alerts.md)")
+	p = add("burn", "burn-rate thresholds for an SLO (alerts.md)")
 	p.add_argument("--slo", type=float, required=True, help="SLO target in percent, e.g. 99.9")
 	p.add_argument("--period", type=float, default=30, help="SLO period in days (default 30)")
 	p.add_argument("--observed", type=float, help="observed error rate in percent, to get its burn rate")
 	p.set_defaults(func=burn)
 
-	p = sub.add_parser("wilson", help="Wilson interval for x successes (or errors) in n")
-	p.add_argument("x", type=int)
-	p.add_argument("n", type=int)
+	p = add("wilson", "interval for x events in n trials; with --baseline, is the rate different from a known one?")
+	p.add_argument("x", type=int, help="events counted: errors or successes, whichever rate you're measuring")
+	p.add_argument("n", type=int, help="total trials (requests, attempts)")
 	p.add_argument("--z", type=float, default=1.96)
+	p.add_argument("--baseline", type=float, help="known normal rate as a fraction (e.g. 0.002 = 0.2%%) to compare against")
 	p.set_defaults(func=wilson)
 
-	p = sub.add_parser("ztest", help="two-proportion z-test: x1/n1 vs x2/n2")
+	p = add("ztest", "two-proportion z-test: x1/n1 vs x2/n2 (both samples need counts)")
 	for name in ("x1", "n1", "x2", "n2"):
 		p.add_argument(name, type=int)
 	p.set_defaults(func=ztest)
 
-	p = sub.add_parser("samples", help="minimum n to measure a rate p within ±e")
+	p = add("samples", "minimum n to measure a rate p within ±e")
 	p.add_argument("--p", type=float, required=True, help="expected rate, e.g. 0.01")
 	p.add_argument("--e", type=float, required=True, help="margin as a fraction, e.g. 0.005 = 0.5 points")
 	p.add_argument("--z", type=float, default=1.96)
 	p.set_defaults(func=samples)
 
-	p = sub.add_parser("poisson", help="P(X ≥ k) for a Poisson count with the given mean")
+	p = add("poisson", "P(X ≥ k) for a Poisson count with the given mean")
 	p.add_argument("--expected", type=float, required=True)
 	p.add_argument("--k", type=int, required=True)
 	p.set_defaults(func=poisson)
 
-	p = sub.add_parser("spillover", help="share of step i+1 requests that started in an earlier window")
+	p = add("spillover", "share of step i+1 requests that started in an earlier window")
 	p.add_argument("--gap", type=float, required=True, help="average time between the steps")
 	p.add_argument("--window", type=float, required=True, help="window length, same unit as --gap")
 	p.set_defaults(func=spillover)
 
 	args = parser.parse_args()
 	result, lines = args.func(args)
-	print(json.dumps(tidy(result), indent=2) if args.json else "\n".join(lines))
+	print(json.dumps(tidy(result), indent=2) if args.json or args.json_sub else "\n".join(lines))
 
 
 if __name__ == "__main__":
