@@ -103,6 +103,8 @@ The first stop in [triage](incidents.md#triage-top-down) after scoping: what cha
 | New errors | Error groups first seen since the last deploy | List (from the error tracker) |
 | Current state | Last 15 minutes: key action success rate, error rate, p99, traffic | Stat tiles |
 
+**Release check**: after a deploy, compare the new version's error rate with the old one's over the same window ([version query](events.md#common-queries)), and test the difference with `calc.py ztest`.
+
 ## Map to your stack
 
 Fill in your own tools; the examples are typical per source type. To translate the panels and alerts into one tool, follow [tools.md](tools.md).

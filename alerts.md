@@ -204,6 +204,8 @@ Temporary, conservative defaults; replace them with thresholds from 4–8 weeks 
 - p99 latency > 1 s
 - CPU > 80%
 
+For a new feature: emit its attempt events from launch, page on these, and set its [SLO target](#choosing-the-slo-target) after 4–8 weeks.
+
 ## Reviewing alerts
 
 Once a month, for the pages of the last 30 days:
