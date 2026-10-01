@@ -2,6 +2,23 @@
 
 Guides for choosing KPIs, building dashboards, setting alerts and analysing incidents, from business outcomes down to the API calls and resources behind them. Tool-agnostic, with a procedure and examples for mapping them onto your tools.
 
+## Use cases
+
+| I want to | Read |
+|---|---|
+| Pick the KPIs for a product, and the key actions behind them | [kpis.md](kpis.md#the-kpi-tree), then fill in [kpi-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/kpi-map.yaml) |
+| Know which API calls a key action depends on, and what a failing call costs | [kpis.md: Connecting the levels](kpis.md#connecting-the-levels-how-an-api-call-affects-a-kpi) |
+| Instrument a service or the frontend | [events.md](events.md), [Product analytics events](events.md#product-analytics-events) |
+| Build the dashboards | [dashboards.md: The dashboard set](dashboards.md#the-dashboard-set) |
+| Decide what pages us, and set an SLO | [alerts.md: What to page on](alerts.md#what-to-page-on), [Choosing the SLO target](alerts.md#choosing-the-slo-target), [Burn-rate alerts](alerts.md#slo-burn-rate-alerts) |
+| Alert on a quiet service | [alerts.md: Low traffic](alerts.md#low-traffic) |
+| Tell if a change is real, or whether a deploy hurt a KPI | [analysis.md](analysis.md#sampling-noise-vs-real-variation), [Attribution recipe](analysis.md#did-it-move-the-kpi-an-attribution-recipe) |
+| Handle an incident, then review it | [incidents.md](incidents.md) |
+| Cut noisy pages | [alerts.md: Reviewing alerts](alerts.md#reviewing-alerts) |
+| Apply all this to our tools | [tools.md](tools.md), and the tool pages under `reference/` |
+| Measure a key action that spans several steps (login with a code, checkout) | [flows.md](flows.md) (advanced) |
+| Understand logs, spans and metrics | [signals.md](signals.md) |
+
 ## Using this repo with an agent
 
 Point the agent at this repo (local path or URL) and tell it to start with [AGENTS.md](https://github.com/arnauio/metrics/blob/main/AGENTS.md). It routes each task (choose KPIs, design dashboards, set an alert, check whether a change is real, triage an incident) to the sections to read, lists the tools, and sets the rules for applying the guides to a real system. Inside the repo, Claude Code loads it automatically through [CLAUDE.md](https://github.com/arnauio/metrics/blob/main/CLAUDE.md).
