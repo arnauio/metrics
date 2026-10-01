@@ -12,7 +12,7 @@ How do you apply these guides to the tools you have? Read the vendor's own docs,
 
 ## The procedure
 
-Fill in [templates/tool-map.yaml](templates/tool-map.yaml) as you go, one per tool. Start from the vendor's docs index, or its `llms.txt` if it has one.
+Fill in [templates/tool-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/tool-map.yaml) as you go, one per tool. Start from the vendor's docs index, or its `llms.txt` if it has one.
 
 {% stepper %}
 {% step %}

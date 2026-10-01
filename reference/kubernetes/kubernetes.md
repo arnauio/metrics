@@ -51,7 +51,7 @@ Prometheus (scraping the kubelet's cAdvisor endpoint, kube-state-metrics and nod
 
 ## Worked example
 
-Key action `save_document` ([KPI map](../../templates/kpi-map.yaml)): one critical-path call, `PUT /documents/:id`, error = 5xx. `job` and route spelling are examples; read yours from `/metrics`.
+Key action `save_document` ([KPI map](https://github.com/arnauio/metrics/blob/main/templates/kpi-map.yaml)): one critical-path call, `PUT /documents/:id`, error = 5xx. `job` and route spelling are examples; read yours from `/metrics`.
 
 ### RED and USE panels
 
