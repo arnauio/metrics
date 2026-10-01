@@ -105,6 +105,7 @@ The model in brief; check Datadog's pricing page and your contract for numbers. 
 - **Distributions** count 5 series per tag combination (count, sum, min, max, avg). Enabling percentiles adds 5 more (p50, p75, p90, p95, p99).
 - **Metrics without Limits** lets you choose which tags stay queryable, which cuts the billed (indexed) series without changing the instrumentation. Metrics configured this way add a smaller charge for ingested volume.
 - Span-based and log-based generated metrics are custom metrics too.
+- **Span tags are the cheap alternative to metric tags** for exploring; alerting on them over all traffic costs again ([apm.md](apm.md#cost-model)).
 
 ### APM
 

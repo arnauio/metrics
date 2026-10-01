@@ -113,7 +113,7 @@ journeys:
 data_sources:
   client_rum: unknown                # e.g. Sentry, Vercel Speed Insights
   edge: unknown                      # e.g. Cloudflare analytics / Logpush
-  server_traces_logs: unknown        # e.g. Google Cloud Trace and Logging
+  server_events: unknown             # e.g. Google Cloud Trace and Logging
   database: unknown                  # e.g. PlanetScale Insights
   deploys_and_flags: unknown         # e.g. GitHub, Vercel deployments, flag audit log
   journey_counters: unknown          # only with journeys (flows.md); e.g. Prometheus, Cloud Monitoring, wide events

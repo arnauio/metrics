@@ -86,8 +86,9 @@ RED per call: **R**ate, **E**rror rate, **D**uration (p50, p95, p99). Group the 
 |---|---|---|
 | **Browser / client** (RUM, frontend SDK) | Real latency including network; client errors; calls that never reach you (DNS, CORS, blocked, offline, timeouts) | What happened inside the server |
 | **Edge / CDN** | Every request that reaches you; status; edge vs origin time; cache hits | Failures before the edge; what happens inside the origin |
-| **Server** (traces, logs, APM) | Handler time, errors, dependency calls | Queueing before the server, network, the client |
+| **Server** (wide events, spans) | Handler time, errors, dependency calls | Queueing before the server, network, the client |
 
+- **RED is computed per vantage point**: per call, a count, an error count and a latency distribution over the requests seen at that vantage point. For alerts, count it before sampling, or weight each event by its sample rate ([events.md](events.md#trade-offs)).
 - The client–server gap is a signal: client errors the server never logged, or client latency far above server latency → likely a network, edge or frontend problem.
 
 ### What counts as an error

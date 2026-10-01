@@ -1,6 +1,6 @@
-# Wide events: explaining what the metrics show
+# Wide events: one event per unit of work
 
-Metrics detect that something is wrong; wide events explain why. A wide event captures **all the context** about a unit of work (like an HTTP request) in a **single event**, rather than scattering it across log lines.
+A wide event captures **all the context** about a unit of work (like an HTTP request) in a **single event**, rather than scattering it across log lines. Events are the source: a log line and a span are both events with fields, and metrics are a cheap projection of them: counted before sampling, they cover all traffic, for alerts and long retention.
 
 {% hint style="info" %}
 
@@ -12,11 +12,11 @@ Metrics detect that something is wrong; wide events explain why. A wide event ca
 
 1. **One unit of work = one event** (an HTTP request, a background job, an async task), because scattered lines can't be tied together ([why](#the-traditional-way-multiple-log-lines)).
 2. **Emit once, at the end**: create it in middleware, let handlers add fields, emit it in a `finally` so errors are included; with OpenTelemetry it's the request's local root span ([example](#the-wide-event-way-one-event)).
-3. **Add the context you'd query** (user and tenant, service metadata, timings, feature flags, error details, resource usage), because the next incident will need a field you didn't think of; mind personal data and cost ([trade-offs](#trade-offs)).
+3. **Add the context you'd query** (user and tenant, service metadata, timings, feature flags, error details, resource usage), because the next incident will need a field you didn't think of; put IDs and new dimensions here, not on metric tags; mind personal data and cost ([trade-offs](#trade-offs)).
 4. **Structure for machines, with one schema across services**, because every field must be a dimension to `GROUP BY` or filter on ([schema](#the-wide-event-way-one-event)).
 5. **Always emit `error` and `error.expected`**, because a filter on a missing field silently drops events ([fields](#the-wide-event-way-one-event)).
 6. **Compare error rates, not counts**, because a version's count grows with its traffic ([queries](#common-queries)).
-7. **Keep SLO and alert counters as metrics**, because events get sampled; use events to explain what the metrics show ([trade-offs](#trade-offs)).
+7. **Alert on data that counts all traffic**: counters taken before sampling, or sampled events weighted by their sample rate, because unweighted samples undercount and skew towards whatever the sampler keeps ([trade-offs](#trade-offs)).
 
 ## The traditional way: multiple log lines
 
@@ -33,6 +33,9 @@ Metrics detect that something is wrong; wide events explain why. A wide event ca
 **Problem:** context is scattered across lines, and only the first and last carry `request_id`. The middle three can't be tied to this request at all: under load, other requests' lines are interleaved with these. Every question ("which auth methods are slowest for premium users?") needs a join across lines, if it's possible at all.
 
 {% endhint %}
+
+- **A structured log isn't automatically a wide event.** JSON lines with fields are still scattered if each carries a fragment. A wide event carries the full, high-cardinality context of the request in one place.
+- **Raw logs can stay.** Brandur's [canonical log lines](https://brandur.org/canonical-log-lines) sit alongside the ordinary log lines; the wide event is the one you query first.
 
 ## The wide event way: one event
 
@@ -193,18 +196,20 @@ Wide events aren't free:
   - *Head sampling* decides when the request starts. It's cheap, but it drops rare errors along with everything else.
   - *Tail sampling* decides after the request ends: keep all errors and slow requests, sample the rest. It needs a buffer, for example the OpenTelemetry Collector's tail sampling processor, and all spans of a trace must reach the same collector instance, so put a trace-ID-aware load-balancing exporter in front.
   - Record the rate on each event (`sample_rate: 20` means "this event stands for 20"), so counts can be re-weighted. Counts from sampled data are estimates.
-- **SLOs and alerts.** Feed them from metrics, the counters behind SLOs (API call RED), not sampled events.
+- **SLOs and alerts.** Their data must count all traffic. Two ways:
+  - *Counters taken before sampling*: metrics, or the trace or span metrics an APM tool computes before it samples. The simpler default ([alerts.md](alerts.md#slo-burn-rate-alerts)).
+  - *Sampled events weighted by `sample_rate`*: each event counts as the requests it stands for. Unweighted, counts read low, and error rates read high if the sampler keeps every error. Weighted counts are estimates: noisier than counters, especially at low traffic, and right only if each event records its true rate.
 - **Personal data.** `user.id`, `client.address` and emails are personal data. Hash or drop what you don't need, set a retention period, and never record secrets or tokens.
-- **Cardinality.** High-cardinality fields are fine in event storage (columnar stores are built for them). Don't copy them into metric tags ([dashboards.md](dashboards.md#tagging-and-cardinality)).
+- **Cardinality.** High-cardinality fields are fine in event storage (columnar stores are built for them). Tools that pre-aggregate bill per series, so the same field is expensive as a metric tag (Datadog custom-metric tags vs span tags, [reference/datadog/apm.md](reference/datadog/apm.md#cost-model)). Don't copy them into metric tags ([dashboards.md](dashboards.md#tagging-and-cardinality)).
 - **Across services.** Each service emits its own event for the same request. To follow a request across services, propagate a trace context (W3C `traceparent`) and query by `trace_id`. A richly tagged APM span *is* a wide event ([reference/datadog/apm.md](reference/datadog/apm.md)).
 
 ### Custom metrics vs wide events
 
-Events keep every field, so any metric can be computed from them as a query (an estimate, if the events are sampled), and wide events can replace many custom metrics. Tools built around this include Honeycomb (its own columnar store) and ClickHouse-based tools such as SigNoz and HyperDX, usually with OpenTelemetry for collection. Metrics still win for cheap, unsampled, long-retention counters. The same tagging principles apply to both.
+Events keep every field, so any metric can be computed from them as a query (an estimate, if the events are sampled), and wide events can replace many custom metrics. Tools built around this include Honeycomb (its own columnar store) and ClickHouse-based tools such as SigNoz and HyperDX, usually with OpenTelemetry for collection. Metrics remain the projection to keep where you need cheap, unsampled, long-retention counters: alerts, SLOs, infrastructure. The same tagging principles apply to both.
 
 ## See also
 
-- [alerts.md](alerts.md#slo-burn-rate-alerts): the counters behind SLOs (API call RED), the cheap ones to alert on.
+- [alerts.md](alerts.md#slo-burn-rate-alerts): SLO alerts on the same RED, kept as counters.
 - [flows.md](flows.md): advanced: the same counters across multi-step flows.
 - [reference/datadog/apm.md](reference/datadog/apm.md): the same idea with Datadog APM spans.
 - [dashboards.md](dashboards.md#tagging-and-cardinality): tagging and cardinality.

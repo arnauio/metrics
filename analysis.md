@@ -10,7 +10,7 @@ A metric moved: is it real, what caused it, did it affect a KPI? Builds on the [
 4. **Compare like with like, against a fixed reference**, because traffic changes by hour and rolling baselines absorb slow degradation ([why](#baselines-and-seasonality)).
 5. **Check a control and confounders before naming a cause**, because a z-test can't tell a deploy from a mix shift ([why](#did-it-move-the-kpi-an-attribution-recipe)).
 6. **Correlate on residuals or within the same hour**, because daily traffic makes unrelated metrics correlate ([why](#correlation-isnt-causation)).
-7. **Compute rates from raw, unsampled counters**, because averaged averages and sampled counts mislead ([why](#pitfalls)).
+7. **Compute rates from counts over all traffic** (unsampled counters, or events weighted by their sample rate), because averaged averages and unweighted sampled counts mislead ([why](#pitfalls)).
 8. **Report the size of a change with its interval, not only "significant"**, because at high volume almost any difference is significant, and significant doesn't mean it matters ([why](#sampling-noise-vs-real-variation)).
 9. **Keep latency outliers and compare instances with each other**, because the tail is often the problem and one bad host hides in a fleet average ([why](#outliers)).
 
@@ -159,6 +159,6 @@ Start time unclear → change-point detection, e.g. CUSUM (cumulative sum of dev
 | Averaging averages over unequal volumes | Weight by volume, or compute from totals |
 | Rate of a rate | Start from raw counters |
 | Zero denominators: `errors / max(requests, 1)` reports 0% during an outage | Treat no traffic as "no data" |
-| Counts from sampled data (traces, sampled events) are estimates; ratios skew if the sampler keeps errors preferentially | Use unsampled counters for rates |
+| Counts from sampled data (traces, sampled events) are estimates; ratios skew if the sampler keeps errors preferentially | Use unsampled counters, or weight each event by its sample rate |
 | Simpson's paradox: a mix shift can reverse the trend in the total | Check the main segments separately |
 | Survivorship: server-side data misses requests that never arrived | Compare the client view with the server view |

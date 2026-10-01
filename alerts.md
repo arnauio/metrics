@@ -51,6 +51,7 @@ Fire only when **both** windows exceed the burn rate. The short window is 1/12 o
   - 99.9% SLO: 1.44%, 0.6%, 0.1%
   - 99.95% SLO: 0.72%, 0.30%, 0.05%
 - **Latency SLOs**: SLI = fraction of requests faster than a threshold (e.g. 500 ms). Alert on the burn rate of the slower fraction the same way.
+- **SLI source**: counters taken before sampling, as in the example below, or a query over events with each one weighted by its sample rate. Weighted counts are estimates, so prefer counters at low traffic ([events.md](events.md#trade-offs)).
 
 ```yaml
 groups:

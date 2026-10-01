@@ -16,6 +16,7 @@ The auth service handles password login, OpenID/OAuth social login, one-time tok
 - **Billing.** APM is billed per APM host, plus **ingested spans** (by GB) and **indexed spans** (by count, for a retention period). Details in [datadog.md](datadog.md#pricing).
 - **No new metrics.** Custom tags on spans don't create custom metrics. They add a few bytes to every ingested span, so they're cheap even with high cardinality (`usr.id`).
 - **Unless you turn them into metrics.** They only become custom metrics if you [generate metrics from spans](#metrics-generated-from-spans). Then cardinality matters again.
+- **Exploring vs alerting.** Span tags are cheap for exploring the ingested and indexed spans, which are sampled. Trace metrics count all traffic but don't carry custom tags. To alert on a custom tag, use metrics generated from spans: they need a bounded tag and 100% of the service's spans ingested, because they aren't weighted by sample rate ([why](#metrics-generated-from-spans)).
 
 ## Tags we add
 
@@ -172,4 +173,4 @@ Every instrumented service gets `trace.<span_name>.hits`, `.errors` and a latenc
 | "What's happening right now?" | Live Search | 15 minutes, all ingested spans |
 | "Why did this request fail?" Stack traces, user reproduction | Indexed spans | 15 days (errors, custom filters); 30 days (intelligent retention sample) |
 
-Use metrics to detect a problem, then drill into traces for the cause, while they're still retained.
+Alert on trace metrics, which count all traffic; find the cause in the spans, while they're still retained.

@@ -402,7 +402,7 @@ If per-step counts differ by orders of magnitude (say 1,000 at step 1 and 500,00
 
 #### Measure flow timing
 
-From traces or logs, get the average time between each pair of steps and for the whole journey.
+From events (spans or logs), get the average time between each pair of steps and for the whole journey.
 
 {% endstep %}
 {% step %}
@@ -633,17 +633,16 @@ This builds on Google SRE's journey-based SLIs ([SRE Workbook](https://sre.googl
 - **Long async steps**, such as email verification that takes hours or days. Windows would need to be very large (1 day+), making detection slow. Use event-based tracking or product-analytics funnels.
 - **Very low traffic**, under ~100 requests per window. Sampling noise makes the ratios jump around. Use longer windows, or synthetic monitoring plus event tracking.
 - **Complex branching**, with lots of optional paths and loops. It can still work, but you need a separate flow for each major branch ([Non-linear flows](#advanced-notes-optional)).
-- **Per-user analysis**, such as "show me all users who failed step 2". This approach has no user IDs. Use tracing, wide events ([events.md](events.md)), or product analytics.
+- **Per-user analysis**, such as "show me all users who failed step 2". This approach has no user IDs. Use wide events and their spans ([events.md](events.md)), or product analytics.
 - **Attribution across long time spans**, such as "of users who signed up last month, how many completed setup?". That's a funnel or cohort question, not an operational health question. Use product analytics tools.
 
-Journey Metrics is the cheap operational signal: SLIs, alerts, dashboards. In our experience, it works best next to tracing for debugging specific failures, product analytics for longer-term funnels and A/B tests, and synthetic checks for baseline health:
+Journey Metrics is the cheap operational signal: SLIs, alerts, dashboards. In our experience, it works best next to wide events (spans) for debugging specific failures, product analytics for longer-term funnels and A/B tests, and synthetic checks for baseline health:
 
 | Approach | How it works | What it is best at | Main tradeoffs |
 |---|---|---|---|
 | **Real User Monitoring / Funnels** | Client events per user/session, queried as funnels | Product analytics, paths, cohorts, UX questions | Needs identity, higher cost, awkward for SLOs |
 | **Synthetic monitoring** | Bots run scripted journeys | Smoke tests, external checks, third parties | Fake traffic, limited scenarios, no load info |
-| **APM / distributed tracing** | Per-request traces across services | Deep debugging of specific failures | High cardinality, sampling, complex queries |
-| **High-cardinality observability** ([events.md](events.md)) | Stores rich, high-cardinality events and fields | Ad-hoc "show me all requests where…" queries | Cost grows with cardinality and usage |
+| **Wide events and traces** ([events.md](events.md)) | One rich event per request; spans add trace context across services | Ad-hoc "show me all requests where…" queries, debugging specific failures | Cost grows with volume and width; sampled |
 | **This Journey Metrics model** | Aggregate request counters per step and time window | Cheap, simple journey SLIs and SLOs | Less flexible for arbitrary ad-hoc questions |
 
 **Beyond login flows**, the same counters work for any short, mostly sequential pipeline:

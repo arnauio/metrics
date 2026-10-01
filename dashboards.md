@@ -13,14 +13,15 @@ What should we show, and to whom? Which dashboards, panels and data. Builds on t
 7. **Change markers on every time series** (deploys, config and flag changes, incidents), one shared time range per dashboard, because "what changed?" comes first in an incident ([Changes and incidents](#5-changes-and-incidents)).
 8. **Chart hygiene**: at most 3 series per chart; no pie charts; the same colours everywhere: green healthy · yellow degraded · red failing · grey no data. More series are unreadable, pies hide small differences, and shared colours read at a glance.
 9. **Default time ranges**: incident 15 min–4 h · operations 1–24 h · capacity 7–90 days · business KPIs this week and month, because long ranges roll points into coarser buckets and hide short spikes.
-10. **Bounded tags only**, because series count multiplies across tags ([Tagging and cardinality](#tagging-and-cardinality)).
+10. **New dimensions go on events; metric tags stay bounded**, because cardinality is cheap on events and series count multiplies across metric tags ([Tagging and cardinality](#tagging-and-cardinality)).
 
 ## Tagging and cardinality
 
 A dashboard can only break down by dimensions recorded as tags or fields.
+- **A new dimension goes on the event or span first** ([events.md](events.md)): columnar event stores handle high cardinality. Make it a metric tag only if it's bounded and you must alert or chart on it over all traffic.
 - **Standard tags**: `service`, `env`, `version`, `region`, plus bounded product dimensions such as `platform`, `plan_tier`, `key_action` (the key action a call serves; a call that serves several key actions gets the tag of the one calling it, or is counted in each).
 - **Bounded tags only**: < ~100 values safe, ~1,000 manageable. Series count = *product* of all tags' value counts, and metrics are usually billed per series.
-- **No IDs as metric tags** (`user_id`, `session_id`, `request_id`, IP addresses) → put them on events or traces ([events.md](events.md#trade-offs)).
+- **No IDs as metric tags** (`user_id`, `session_id`, `request_id`, IP addresses) → put them on events, spans included ([events.md](events.md#trade-offs)).
 - **Route templates, not paths**: `/api/documents/:id`, not `/api/documents/12345`.
 - **Grouped values**: `status_class:5xx` next to the exact code; `error_type:timeout`, not the error message.
 - **One metric name, many services**: `http.server.request.duration{service:...}`, not a metric per service. Default naming: [OpenTelemetry semantic conventions](https://opentelemetry.io/docs/specs/semconv/).
@@ -108,7 +109,7 @@ Fill in your own tools; the examples are typical per source type.
 |---|---|---|
 | Client latency, Core Web Vitals, client errors | RUM / frontend SDK | Sentry, Vercel Speed Insights, Datadog RUM |
 | Edge requests, status, cache, edge vs origin time | CDN or edge analytics and logs | Cloudflare analytics and Logpush |
-| Server RED, traces, logs | APM / tracing / logging | Sentry performance, Google Cloud Trace and Logging, Datadog APM |
+| Server RED; per-request events and spans | APM or an event store (spans, structured logs) | Sentry performance, Google Cloud Trace and Logging, Datadog APM |
 | Database | Database insights | PlanetScale Insights, Cloud SQL Query Insights |
 | Deploys and changes | CI/CD, hosting, flag service | GitHub, Vercel deployments, feature-flag audit logs |
 | Business KPIs | Product analytics or warehouse | Amplitude, BigQuery |
