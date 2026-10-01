@@ -15,19 +15,19 @@ A metric moved: is it real, what caused it, did it affect a KPI? Chapter 2; read
 
 ## Sampling noise vs real variation
 
-- **Sampling noise shrinks with volume**: $SE = \sqrt{p(1-p)/n}$ falls as $1/\sqrt{n}$, so 100× the traffic → 10× less noise.
+- **Sampling noise shrinks with volume**: $$SE = \sqrt{p(1-p)/n}$$ falls as $$1/\sqrt{n}$$, so 100× the traffic → 10× less noise.
 - **Real variation doesn't shrink**: performance fluctuates, traffic mix shifts, users behave differently by hour. Past some volume it dominates (plots: [flows.md Part 3](flows.md#part-3-real-world-variabilityjitter)).
 ![σ of C(t) vs requests per window: sampling noise only vs with real variation](images/analysis/noise_vs_variation.png)
 
-Simulated journey with $C ≈ 0.73$. Without real variation, σ falls as $1/\sqrt{n}$ (0.048 at 100 requests, 0.0005 at 1M). With each step varying ±0.05 per window, σ stays around 0.042 from ~1,000 requests on.
+Simulated journey with $$C ≈ 0.73$$. Without real variation, σ falls as $$1/\sqrt{n}$$ (0.048 at 100 requests, 0.0005 at 1M). With each step varying ±0.05 per window, σ stays around 0.042 from ~1,000 requests on.
 
 - **Example**: a login journey at 18,000 attempts per 5 minutes: binomial SE 0.2%, observed σ 1.5%. Limits from the SE (μ − 3 × 0.2%) fire constantly; limits from the observed σ (μ − 3 × 1.5%) don't.
 - **No history?** Say so: the sampling-noise result (Wilson, z-test, Poisson) is only a lower bound. Get 4–8 weeks of the metric at the same window before setting limits.
 - **Significance tests cover sampling noise only**: at high volume almost any difference is "significant".
 - **"Significant at the 5% level"** = if nothing had changed, a difference this large would appear by chance < 5% of the time. **Not** a 95% probability that the change is real.
-- **Smoothing** with a moving average of $w$ windows:
-  - $\sqrt{w}$ times less variation; lags about $(w-1)/2$ windows (the full change shows after $w$);
-  - σ for its limits = σ of the raw values ÷ $\sqrt{w}$. Don't estimate it from the average's own window-to-window changes: neighbouring averages share $w - 1$ inputs, so the estimate comes out far too small.
+- **Smoothing** with a moving average of $$w$$ windows:
+  - $$\sqrt{w}$$ times less variation; lags about $$(w-1)/2$$ windows (the full change shows after $$w$$);
+  - σ for its limits = σ of the raw values ÷ $$\sqrt{w}$$. Don't estimate it from the average's own window-to-window changes: neighbouring averages share $$w - 1$$ inputs, so the estimate comes out far too small.
 
 ## σ thresholds and what they promise
 
@@ -41,7 +41,7 @@ A simulated lognormal sample (median 45 ms, mean 71 ms, σ 89 ms): μ + 3σ = 33
 
 ## Wilson score interval
 
-The simple 95% range is $p ± 1.96\,SE$.
+The simple 95% range is $$p ± 1.96\,SE$$.
 
 ![95% interval for an observed 1% error rate vs requests, simple vs Wilson](images/analysis/wilson_vs_simple.png)
 
@@ -63,11 +63,11 @@ margin = 1.96 × sqrt(0.0000165 + 0.00000267) / 1.0064 = 0.0085
 
 ## Windows
 
-Step ratios ($T_i = A_{i+1}/A_i$) depend on window size $W$ vs the time between steps.
-- **Spillover** ≈ average gap ÷ $W$: the share of step-$(i+1)$ requests whose step $i$ fell in an earlier window.
+Step ratios ($$T_i = A_{i+1}/A_i$$) depend on window size $$W$$ vs the time between steps.
+- **Spillover** ≈ average gap ÷ $$W$$: the share of step-$$(i+1)$$ requests whose step $$i$$ fell in an earlier window.
 - Steady traffic: spillover in and out balance; the ratio is right on average, just noisier.
 - Changing traffic: the ratio reads low while traffic ramps up, high (even above 1) while it ramps down.
-- For end-to-end conversion, $W$ ≥ 5–10× the average journey time. Plots: [flows.md Part 5](flows.md#part-5-window-sizing).
+- For end-to-end conversion, $$W$$ ≥ 5–10× the average journey time. Plots: [flows.md Part 5](flows.md#part-5-window-sizing).
 
 ## Baselines and seasonality
 
@@ -79,12 +79,12 @@ Step ratios ($T_i = A_{i+1}/A_i$) depend on window size $W$ vs the time between 
 
 Example: "After Tuesday's deploy, the p95 of `PUT /documents/:id` went from 300 ms to 900 ms. Did saves suffer?"
 
-1. **Place it in the tree** ([kpis.md](kpis.md)). The call is on the critical path of the save step in the "edit and save" journey → check that step's $T_i$, the journey's $C$, then the business KPI (engagement: saves per active user).
+1. **Place it in the tree** ([kpis.md](kpis.md)). The call is on the critical path of the save step in the "edit and save" journey → check that step's $$T_i$$, the journey's $$C$$, then the business KPI (engagement: saves per active user).
 2. **Before vs after, like with like**: days after the deploy vs the same days and hours a week earlier.
-3. **Test it against real variation**: is the change in $T_i$ bigger than its usual week-over-week change in healthy weeks, or than the control segment's change (step 4)? A z-test alone [covers sampling noise only](#sampling-noise-vs-real-variation). Mann-Whitney on journey latency.
+3. **Test it against real variation**: is the change in $$T_i$$ bigger than its usual week-over-week change in healthy weeks, or than the control segment's change (step 4)? A z-test alone [covers sampling noise only](#sampling-noise-vs-real-variation). Mann-Whitney on journey latency.
 4. **Use a control**: a segment the change didn't reach (a region, a client version still on the old code, a platform). Control moved the same way → the deploy isn't the cause.
 5. **Look for confounders**: other deploys and flag changes in the window, marketing pushes, holidays, a traffic-mix shift (a bot wave lowers ratios without any bug).
-6. **Size it**: extra failed or abandoned journeys = starts × drop in $C$ × duration, with its interval.
+6. **Size it**: extra failed or abandoned journeys = starts × drop in $$C$$ × duration, with its interval.
 7. **Find the moment**: start time unclear → change-point detection, e.g. CUSUM (cumulative sum of deviations from the baseline; its slope changes when the level shifts). Line it up with the change timeline.
 
 ## Correlation isn't causation
@@ -98,8 +98,8 @@ Simulated week: CPU and latency both follow daily traffic with independent noise
 
 ## Outliers
 
-- **Z-score** $(x - μ)/σ$, flag $\lvert z\rvert > 3$: simple; assumes normal data.
-- **IQR** (interquartile range, $Q_3 - Q_1$, the 75th minus the 25th percentile): flag below $Q_1 - 1.5\,IQR$ or above $Q_3 + 1.5\,IQR$.
+- **Z-score** $$(x - μ)/σ$$, flag $$\lvert z\rvert > 3$$: simple; assumes normal data.
+- **IQR** (interquartile range, $$Q_3 - Q_1$$, the 75th minus the 25th percentile): flag below $$Q_1 - 1.5\,IQR$$ or above $$Q_3 + 1.5\,IQR$$.
 - **MAD** (median absolute deviation): more robust to extremes.
 - One misbehaving host or pod: compare instances with each other, not with a fixed threshold.
 - Don't filter latency outliers out; the tail is often the problem. Look at p95, p99 and the heatmap.
@@ -110,13 +110,13 @@ Simulated week: CPU and latency both follow daily traffic with independent noise
 
 | Need | Formula | Note |
 |---|---|---|
-| Noise of a rate | $SE = \sqrt{p(1-p)/n}$; 95% range ≈ $p ± 1.96\,SE$ | Sampling noise only; real systems vary more ([above](#sampling-noise-vs-real-variation)) |
-| Interval for a rate, small $n$ or $p$ near 0 | [Wilson score](#wilson-score-interval) | The simple range goes below 0% |
-| Two rates differ? | $z = (p_1 - p_2) / \sqrt{\bar p(1-\bar p)(1/n_1 + 1/n_2)}$, with pooled $\bar p = (x_1 + x_2)/(n_1 + n_2)$ | $x$ = successes, $n$ = attempts. $\lvert z\rvert > 1.96$: significant at the 5% level. Sampling noise only |
+| Noise of a rate | $$SE = \sqrt{p(1-p)/n}$$; 95% range ≈ $$p ± 1.96\,SE$$ | Sampling noise only; real systems vary more ([above](#sampling-noise-vs-real-variation)) |
+| Interval for a rate, small $$n$$ or $$p$$ near 0 | [Wilson score](#wilson-score-interval) | The simple range goes below 0% |
+| Two rates differ? | $$z = (p_1 - p_2) / \sqrt{\bar p(1-\bar p)(1/n_1 + 1/n_2)}$$, with pooled $$\bar p = (x_1 + x_2)/(n_1 + n_2)$$ | $$x$$ = successes, $$n$$ = attempts. $$\lvert z\rvert > 1.96$$: significant at the 5% level. Sampling noise only |
 | Two latency samples differ? | Mann-Whitney U | Latency is skewed; a t-test assumes roughly normal data |
-| Rare events: is this count surprising? | Poisson: $P(X ≥ k)$ with mean $\lambda$ = expected count | 5+ errors when 0.12 are expected: $P ≈ 2 \times 10^{-7}$ |
-| Samples needed to measure a rate | $n = z^2 p(1-p) / E^2$ | $E$ = margin you accept, $z = 1.96$ for 95%. $p = 1\%$, $E = 0.5$ points: 1,522. $E = 0.1$ points: ~38,000 |
-| Spread relative to size | $CV = σ/μ$ | < 0.1: tight thresholds work; > 0.5: use percentiles, longer windows |
+| Rare events: is this count surprising? | Poisson: $$P(X ≥ k)$$ with mean $$\lambda$$ = expected count | 5+ errors when 0.12 are expected: $$P ≈ 2 \times 10^{-7}$$ |
+| Samples needed to measure a rate | $$n = z^2 p(1-p) / E^2$$ | $$E$$ = margin you accept, $$z = 1.96$$ for 95%. $$p = 1\%$$, $$E = 0.5$$ points: 1,522. $$E = 0.1$$ points: ~38,000 |
+| Spread relative to size | $$CV = σ/μ$$ | < 0.1: tight thresholds work; > 0.5: use percentiles, longer windows |
 
 ## Pitfalls
 

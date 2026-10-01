@@ -58,18 +58,18 @@ Choosing journeys:
 2. Rank by traffic × business value. Login and "load the main screen" usually come first, because every other journey depends on them.
 3. Start with 3–5, and map each one to its calls ([Map it](#1-map-it)).
 
-Notation, per time window $t$: $A_i(t)$ = requests arriving at step $i$; step $S$ = the success step (count only successful requests there).
+Notation, per time window $$t$$: $$A_i(t)$$ = requests arriving at step $$i$$; step $$S$$ = the success step (count only successful requests there).
 
 | KPI | Formula | Answers |
 |---|---|---|
-| Journey success rate | $C(t) = A_S(t) / A_1(t)$ | "Does the journey work right now?" |
-| Step transition | $T_i(t) = A_{i+1}(t) / A_i(t)$ | "Which step broke?" |
-| Journey volume | $A_1(t)$ | "Can users start?" A drop = users can't reach step 1, or demand fell |
+| Journey success rate | $$C(t) = A_S(t) / A_1(t)$$ | "Does the journey work right now?" |
+| Step transition | $$T_i(t) = A_{i+1}(t) / A_i(t)$$ | "Which step broke?" |
+| Journey volume | $$A_1(t)$$ | "Can users start?" A drop = users can't reach step 1, or demand fell |
 | Journey latency | First step to success, p75 and p95, from RUM or traces | "Is it slow enough that people give up?" |
-| Journey SLI | $\sum_t A_S(t) / \sum_t A_1(t)$ over 30 days | SLO reporting, error budget |
+| Journey SLI | $$\sum_t A_S(t) / \sum_t A_1(t)$$ over 30 days | SLO reporting, error budget |
 
-- **Count each step once per attempt.** Autosave sends many `PUT`s per document open; clients poll and retry. Counted per request, these inflate $A_i$ and can push $C$ above 1. Count a once-per-attempt signal instead: the first successful save per edit session, or a "saved" event.
-- **Keep journeys short**: $C(t)$ needs windows 5–10× the journey's duration ([analysis.md](analysis.md#windows); deep dive in [flows.md Part 5](flows.md#part-5-window-sizing)), so split a long editing session into short journeys (open → editable; save → saved) and alert on those.
+- **Count each step once per attempt.** Autosave sends many `PUT`s per document open; clients poll and retry. Counted per request, these inflate $$A_i$$ and can push $$C$$ above 1. Count a once-per-attempt signal instead: the first successful save per edit session, or a "saved" event.
+- **Keep journeys short**: $$C(t)$$ needs windows 5–10× the journey's duration ([analysis.md](analysis.md#windows); deep dive in [flows.md Part 5](flows.md#part-5-window-sizing)), so split a long editing session into short journeys (open → editable; save → saved) and alert on those.
 
 ## Level 3: API call SLIs
 
@@ -132,16 +132,16 @@ Write this table for each journey; dashboards and impact estimates are built on 
 
 ### 2. Estimate the effect on the journey
 
-- **Errors multiply**: $C = \prod T_i$. A critical-path call failing for a fraction $e$ of requests turns $T_i$ into at most $T_i(1-e)$ (less of a drop if the client retries), so $C$ becomes at most $C(1-e)$. Example: $C = 0.80$, $e = 5\%$ → $C = 0.76$, a 4-point drop.
+- **Errors multiply**: $$C = \prod T_i$$. A critical-path call failing for a fraction $$e$$ of requests turns $$T_i$$ into at most $$T_i(1-e)$$ (less of a drop if the client retries), so $$C$$ becomes at most $$C(1-e)$$. Example: $$C = 0.80$$, $$e = 5\%$$ → $$C = 0.76$$, a 4-point drop.
 - **Latency adds or maxes**: sequential critical-path calls add up; parallel ones cost the slowest. A slow call off the critical path doesn't slow the journey.
-- **Latency becomes errors through abandonment**: users give up on slow steps they're waiting for → lower $T_i$.
-  - Measure it: record each attempt's call latency with its outcome (RUM or wide events), bucket the latency (e.g. < 300 ms, 300 ms–1 s, > 1 s), and compare $T_i$ per bucket.
+- **Latency becomes errors through abandonment**: users give up on slow steps they're waiting for → lower $$T_i$$.
+  - Measure it: record each attempt's call latency with its outcome (RUM or wide events), bucket the latency (e.g. < 300 ms, 300 ms–1 s, > 1 s), and compare $$T_i$$ per bucket.
   - Don't assume industry rules of thumb like "100 ms = 1% conversion".
   - Calls the user doesn't wait for (background autosave, prefetch) can't cause abandonment. For those, watch their failures and what they cause instead: unsaved-changes warnings, lost edits, conflicts.
 
 ![Journey success C vs the error rate of one critical-path call, with and without a client retry](images/kpis/errors_multiply.png)
 
-With $C = 0.80$, a critical-path call failing 5% of the time takes the journey to 0.76. One client retry (failing only if both tries fail, $e^2$) keeps it at 0.798, but only if the retry fails independently of the first try. During real incidents failures are correlated, so retries help much less.
+With $$C = 0.80$$, a critical-path call failing 5% of the time takes the journey to 0.76. One client retry (failing only if both tries fail, $$e^2$$) keeps it at 0.798, but only if the retry fails independently of the first try. During real incidents failures are correlated, so retries help much less.
 
 ![Waterfall of a page load: critical-path calls in red, non-critical in grey](images/kpis/critical_path.png)
 
@@ -149,7 +149,7 @@ Illustrative page load: it's usable at 430 ms = 80 (session) + 200 (the slower o
 
 ### 3. Estimate the effect on the KPI
 
-- **Failed journeys** ≈ $A_1$ per hour × drop in $C$ × duration.
+- **Failed journeys** ≈ $$A_1$$ per hour × drop in $$C$$ × duration.
   - Example: 10,000 journey starts/h × 5 points × 2 h = 1,000 failed journeys.
 - **Business impact** = failed journeys × share that never comes back and succeeds.
   - Measure that share from past incidents, if you can link retries to users (product analytics, [events.md](events.md)).
@@ -173,10 +173,10 @@ Write down for every KPI:
 
 | Term | Meaning |
 |---|---|
-| Journey, $A_i(t)$, $T_i(t)$, $C(t)$ | Defined in [Level 2](#level-2-journey-kpis). [flows.md](flows.md) calls $C(t)$ "conversion"; here *conversion* means only the business KPI (free → paid). |
+| Journey, $$A_i(t)$$, $$T_i(t)$$, $$C(t)$$ | Defined in [Level 2](#level-2-journey-kpis). [flows.md](flows.md) calls $$C(t)$$ "conversion"; here *conversion* means only the business KPI (free → paid). |
 | SLI | Service level indicator: the fraction of good events, e.g. successful requests, requests faster than 500 ms, journeys that succeed. |
 | SLO | Target for an SLI over a period, e.g. "99.9% of requests succeed over 30 days". |
-| Error budget | The bad events an SLO allows: $1 -$ target. Burn rate = how fast it's being used ([alerts.md](alerts.md#slo-burn-rate-alerts)). |
+| Error budget | The bad events an SLO allows: $$1 -$$ target. Burn rate = how fast it's being used ([alerts.md](alerts.md#slo-burn-rate-alerts)). |
 | RUM | Real user monitoring: measurements taken in users' browsers or apps. |
 | p75, p95, p99 | Percentiles: 75%, 95%, 99% of values are below. p75 for user experience (Core Web Vitals), p95/p99 for tails and alerts. |
 | μ, σ | Mean and standard deviation, measured over healthy (baseline) data. |

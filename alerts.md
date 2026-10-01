@@ -86,9 +86,9 @@ The example counts server-side 5xx for brevity; prefer client or edge counts, wh
 |---|---|---|---|
 | **Error rate** | Burn rate on the SLO (above) | 14.4× over 1h and 5m | One error crosses it at [low traffic](#low-traffic) |
 | **Latency** | Burn rate on "fraction slower than X"; or a percentile threshold from histograms, sustained | `histogram_quantile(0.95, …) > 0.2` for 10m | Never mean + 3σ: latency is skewed. A threshold close to the normal p95 flaps. |
-| **Traffic volume** ($A_1$ of each key journey, or requests per service) | Time-of-week baseline μ(hour, day) − 3σ(hour, day), drops lasting 5m ([below](#traffic-volume)) | Normal Tuesday 2pm 420 req/s, σ 25 → alert below 345 | One μ and σ over all hours of the week never fires |
+| **Traffic volume** ($$A_1$$ of each key journey, or requests per service) | Time-of-week baseline μ(hour, day) − 3σ(hour, day), drops lasting 5m ([below](#traffic-volume)) | Normal Tuesday 2pm 420 req/s, σ 25 → alert below 345 | One μ and σ over all hours of the week never fires |
 | **Capacity** (CPU, memory, pools) | Load-tested limits, **per instance** | CPU warn 70%, critical 80%; pool warn 75%, critical 90% | μ + 3σ often lands past the point where things degrade. Averaging instances hides one hot instance. |
-| **Journey success rate** $C(t)$ | Control limits from the **observed** σ of healthy windows: μ − 3σ ([below](#journey-success-rate)) | μ 0.92, σ 0.015 → alert below 0.875 for 15m | Binomial σ (from volume) fires constantly ([why](analysis.md#sampling-noise-vs-real-variation)) |
+| **Journey success rate** $$C(t)$$ | Control limits from the **observed** σ of healthy windows: μ − 3σ ([below](#journey-success-rate)) | μ 0.92, σ 0.015 → alert below 0.875 for 15m | Binomial σ (from volume) fires constantly ([why](analysis.md#sampling-noise-vs-real-variation)) |
 | **Rare events** | Any occurrence, on the counter's increase | `increase(disk_errors_total[10m]) > 0` | `counter > 0` stays true forever after the first event |
 | **Dependencies** | Their SLA plus a margin, sustained | Vendor p95 SLA 800 ms → alert above 1 s for 10m | Don't page on a vendor's normal p99 |
 
@@ -104,8 +104,8 @@ One μ − 3σ over the whole week (μ 199, σ 129) comes out at −188 req/s an
 
 ### Journey success rate
 
-- Burn-rate tiers assume a small error budget (targets of 99% and up). A journey's normal failures include abandonment (e.g. $C ≈ 0.92$), so its budget is large and a 14.4× burn is impossible.
-- Keep a journey SLO (target from the baseline, failure fraction $1 - C$) for reporting only.
+- Burn-rate tiers assume a small error budget (targets of 99% and up). A journey's normal failures include abandonment (e.g. $$C ≈ 0.92$$), so its budget is large and a 14.4× burn is impossible.
+- Keep a journey SLO (target from the baseline, failure fraction $$1 - C$$) for reporting only.
 
 ### Static vs dynamic thresholds
 
@@ -178,7 +178,7 @@ Start conservative; tune after 1–2 weeks of data:
 - error rate > 1%
 - p99 latency > 1 s
 - CPU > 80%
-- journey $C$ below 80% of its first week's average
+- journey $$C$$ below 80% of its first week's average
 
 ## Checklist
 

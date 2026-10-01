@@ -43,7 +43,7 @@ Drill-down: KPI tile (1) → its journey (2) → a step's calls (3) → their de
 | Panel | What it shows | Chart |
 |---|---|---|
 | Business KPIs | Each level-1 KPI, current value and week-over-week change | Stat tiles with sparklines |
-| Journey health | $C(t)$ per journey, last 24 h, against its control limits | Small multiples, one per journey |
+| Journey health | $$C(t)$$ per journey, last 24 h, against its control limits | Small multiples, one per journey |
 | SLO status | Journey SLI over 30 days vs target; error budget remaining | Stat tiles, green/yellow/red |
 | User experience | Core Web Vitals p75 (LCP, INP, CLS) against the "good" thresholds | Stat tiles |
 | Open issues | Firing alerts, open incidents | List |
@@ -53,13 +53,13 @@ Drill-down: KPI tile (1) → its journey (2) → a step's calls (3) → their de
 
 | Panel | What it shows | Chart |
 |---|---|---|
-| Funnel now vs last week | $A_i$ per step, current window and the same window a week ago | Grouped bars |
-| Success rate | $C(t)$ with control limits | Time series |
-| Step transitions | $T_i(t)$ per step, with limits | Small multiples |
-| Volume | $A_1(t)$ with last week's line | Time series |
+| Funnel now vs last week | $$A_i$$ per step, current window and the same window a week ago | Grouped bars |
+| Success rate | $$C(t)$$ with control limits | Time series |
+| Step transitions | $$T_i(t)$$ per step, with limits | Small multiples |
+| Volume | $$A_1(t)$$ with last week's line | Time series |
 | Journey latency | p75, p95 from first step to success | Time series |
 | Failing calls per step | Top calls by error count on each step's critical path | Table |
-| Segments | $C$ by platform, client version, region, plan tier | Table or heatmap |
+| Segments | $$C$$ by platform, client version, region, plan tier | Table or heatmap |
 
 Window size for the ratios follows the journey's timing ([analysis.md](analysis.md#windows)).
 
@@ -93,7 +93,7 @@ Window size for the ratios follows the journey's timing ([analysis.md](analysis.
 | Change timeline | Frontend deploys, backend deploys, migrations, config and flag changes | Timeline |
 | Before/after | Per endpoint and per journey: error rate and p95 in the hour before vs after each deploy | Table |
 | New errors | Error groups first seen since the last deploy | List (from the error tracker) |
-| Current state | Last 15 minutes: journey $C$, error rate, p99, traffic | Stat tiles |
+| Current state | Last 15 minutes: journey $$C$$, error rate, p99, traffic | Stat tiles |
 
 ## Map to your stack
 

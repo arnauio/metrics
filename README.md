@@ -4,7 +4,7 @@ Guides for choosing KPIs, building dashboards, setting alerts and analysing inci
 
 ## Using this repo with an agent
 
-Point the agent at this repo (local path or URL) and tell it to start with [AGENTS.md](AGENTS.md). It routes each task (choose KPIs, design dashboards, set an alert, check whether a change is real, triage an incident) to the sections to read, lists the tools, and sets the rules for applying the guides to a real system. Inside the repo, Claude Code loads it automatically through [CLAUDE.md](CLAUDE.md).
+Point the agent at this repo (local path or URL) and tell it to start with [AGENTS.md](https://github.com/arnauio/metrics/blob/main/AGENTS.md). It routes each task (choose KPIs, design dashboards, set an alert, check whether a change is real, triage an incident) to the sections to read, lists the tools, and sets the rules for applying the guides to a real system. Inside the repo, Claude Code loads it automatically through [CLAUDE.md](https://github.com/arnauio/metrics/blob/main/CLAUDE.md).
 
 Example:
 
@@ -30,7 +30,7 @@ One question runs through the guide: **is the product working for users right no
 
 **Tool-specific**: [reference/datadog/](reference/datadog/datadog.md): Datadog dashboards and pricing, and APM enrichment for a Java service.
 
-**Templates**: [templates/kpi-map.yaml](templates/kpi-map.yaml): KPIs, journeys, API calls and data sources, to fill in for a real system.
+**Templates**: [templates/kpi-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/kpi-map.yaml): KPIs, journeys, API calls and data sources, to fill in for a real system.
 
 Journey metrics build on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and on [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google).
 
@@ -48,9 +48,9 @@ On the first run, uv creates `.venv` and installs the dependencies from `pyproje
 
 | Script | Plots for | Images |
 |---|---|---|
-| [src/flows_plots.py](src/flows_plots.py) | [flows.md](flows.md) | `images/plot*.png` |
-| [src/kpis_plots.py](src/kpis_plots.py) | [kpis.md](kpis.md) | `images/kpis/` |
-| [src/alerts_plots.py](src/alerts_plots.py) | [alerts.md](alerts.md) | `images/alerts/` |
-| [src/analysis_plots.py](src/analysis_plots.py) | [analysis.md](analysis.md) | `images/analysis/` |
+| [src/flows_plots.py](https://github.com/arnauio/metrics/blob/main/src/flows_plots.py) | [flows.md](flows.md) | `images/plot*.png` |
+| [src/kpis_plots.py](https://github.com/arnauio/metrics/blob/main/src/kpis_plots.py) | [kpis.md](kpis.md) | `images/kpis/` |
+| [src/alerts_plots.py](https://github.com/arnauio/metrics/blob/main/src/alerts_plots.py) | [alerts.md](alerts.md) | `images/alerts/` |
+| [src/analysis_plots.py](https://github.com/arnauio/metrics/blob/main/src/analysis_plots.py) | [analysis.md](analysis.md) | `images/analysis/` |
 
-Shared helpers (paths, seeding, saving, the journey simulation) are in [src/common.py](src/common.py). [src/calc.py](src/calc.py) uses the standard library only.
+Shared helpers (paths, seeding, saving, the journey simulation) are in [src/common.py](https://github.com/arnauio/metrics/blob/main/src/common.py). [src/calc.py](https://github.com/arnauio/metrics/blob/main/src/calc.py) uses the standard library only.
