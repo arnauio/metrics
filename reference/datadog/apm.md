@@ -1,6 +1,9 @@
-# APM trace enrichment
+---
+description: "How do we add business context to Datadog APM spans for the auth service, troubleshoot with it, and know what Datadog keeps for how long?"
+icon: diagram-project
+---
 
-How we add business context to Datadog APM spans for the auth service, how to troubleshoot with it, and what Datadog keeps for how long.
+# APM trace enrichment
 
 The auth service handles password login, OpenID/OAuth social login, one-time token (OTT) login, where the client polls until the user confirms, device login, and API keys for third-party integrations. The endpoint names below are this doc's; [flows.md](../../flows.md) uses its own simplified flows.
 
@@ -20,7 +23,7 @@ The auth service handles password login, OpenID/OAuth social login, one-time tok
 
 ## Tags we add
 
-{% hint style="info" %}
+{% hint style="success" %}
 
 Set these on the request's **local root span**, the top-level span for the request in this service. Tagging whatever span is active might put them on a child span (a JDBC query, an HTTP client call), where request-level queries won't find them.
 
@@ -39,6 +42,7 @@ Set these on the request's **local root span**, the top-level span for the reque
 
 The Datadog Java agent (`dd-java-agent`) creates the spans automatically. We only add tags. Datadog documents doing this through the OpenTracing API plus its own `MutableSpan` interface. OpenTracing itself is archived; if you're moving to OpenTelemetry, `Span.current().setAttribute(...)` is the equivalent, but it tags the current span, which may be a child.
 
+{% code title="Tag the local root span" %}
 ```java
 import datadog.trace.api.interceptor.MutableSpan;
 import io.opentracing.Span;
@@ -54,6 +58,7 @@ static void tagRequest(String platform, String apiKeyId, String userId) {
     }
 }
 ```
+{% endcode %}
 
 ### Tomcat
 
@@ -68,6 +73,7 @@ static void tagRequest(String platform, String apiKeyId, String userId) {
 - **Netty promise listeners** are the exception among Netty's own APIs: propagation into them is off by default. Enable it with `-Ddd.integration.netty-promise.enabled=true`.
 - **What you handle**: hand-offs the agent can't see, such as a hand-rolled `BlockingQueue` consumer, `new Thread(...)`, or a library with its own scheduler. Pass the span along with the work item and activate it on the other side:
 
+{% code title="Hand the span to another thread" %}
 ```java
 // import io.opentracing.Scope;
 // producer, while the request's span is active
@@ -79,19 +85,21 @@ try (Scope scope = GlobalTracer.get().activateSpan(job.span())) {
     // code here sees the request's span
 }
 ```
+{% endcode %}
 
 ## Troubleshooting with enriched traces
 
 - **Syntax.** Queries use Trace Explorer syntax. Custom tags and span attributes take an `@` prefix (`@platform`, `@http.status_code`); reserved attributes (`service`, `resource_name`, `status`) and unified service tags (`env`, `version`) don't.
 - **What counts as an error.** By default, Datadog marks server spans as errors for 5xx responses and for uncaught exceptions. 4xx responses (a wrong password, an expired token) are usually expected, so filter on `@http.status_code` when you want them. Client spans (our calls to other services) default to the opposite: 4xx is an error.
 
-{% hint style="warning" %}
+{% hint style="danger" %}
 
 **Which spans a query can find.** For something happening right now, use **Live Search**, which covers every ingested span from the last 15 minutes. Older than that, you only find spans that a [retention filter](#what-datadog-keeps) kept. Error spans are kept by default. For non-error spans, only a sample is kept, so a query for one specific user or key might find few or none of their successful requests unless you add a retention filter for them.
 
 {% endhint %}
 
-### Users
+{% tabs %}
+{% tab title="Users" %}
 
 | Question | Query | Then look at |
 |---|---|---|
@@ -99,7 +107,8 @@ try (Scope scope = GlobalTracer.get().activateSpan(job.span())) {
 | Password login works but social login fails for one user? | `service:auth @usr.id:usr_456 resource_name:("POST /auth/password" OR "POST /auth/openid")` | Group by `resource_name` and `status`; compare the errors |
 | Is a user stuck polling for an OTT? | `service:auth @usr.id:usr_456 resource_name:"GET /auth/ott/poll"` | Poll count and gaps over time; when polling started |
 
-### API keys
+{% endtab %}
+{% tab title="API keys" %}
 
 | Question | Query | Then look at |
 |---|---|---|
@@ -110,7 +119,8 @@ try (Scope scope = GlobalTracer.get().activateSpan(job.span())) {
 
 - `@platform:*` skips spans with no platform tag.
 
-### Endpoints and releases
+{% endtab %}
+{% tab title="Endpoints and releases" %}
 
 | Question | Query | Then look at |
 |---|---|---|
@@ -122,6 +132,9 @@ try (Scope scope = GlobalTracer.get().activateSpan(job.span())) {
 
 - **Spans measure backend time only.** Client and network latency need RUM.
 - **For error *rates* by version**, use [trace metrics](#trace-metrics), which count all traffic.
+
+{% endtab %}
+{% endtabs %}
 
 ## Retention and metrics
 

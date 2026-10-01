@@ -1,6 +1,11 @@
+---
+description: "A metric moved: is it real, what caused it, did it affect a KPI?"
+icon: chart-line
+---
+
 # Analysis: is this change real, and did it move the KPI?
 
-A metric moved: is it real, what caused it, did it affect a KPI? Builds on the [KPI tree](kpis.md#the-kpi-tree).
+Builds on the [KPI tree](kpis.md#the-kpi-tree).
 
 ## Rules
 
@@ -48,6 +53,7 @@ The simple 95% range is $$p \pm 1.96\,SE$$.
 
 <figure><img src="images/analysis/wilson_vs_simple.png" alt="95% interval for an observed 1% error rate vs requests, simple vs Wilson"><figcaption><p>For an observed 1% rate, the simple interval goes below 0% under ~380 requests; Wilson stays positive and is wider on the high side.</p></figcaption></figure>
 
+{% code title="Wilson interval: 6 errors in 600 requests" %}
 ```text
 center = (p + z²/(2n)) / (1 + z²/n)
 margin = z × sqrt(p(1−p)/n + z²/(4n²)) / (1 + z²/n)
@@ -57,6 +63,7 @@ center = (0.01 + 0.0032) / 1.0064 = 0.0131
 margin = 1.96 × sqrt(0.0000165 + 0.00000267) / 1.0064 = 0.0085
 95% CI = [0.46%, 2.16%]
 ```
+{% endcode %}
 
 - Baseline (say 0.02%) outside the interval → statistically significant: noise alone would rarely produce it. Whether it matters, and why, are separate questions.
 - Read the width: with 600 requests you know "around 0.5–2%", not "1%".

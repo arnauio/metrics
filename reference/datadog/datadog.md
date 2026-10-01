@@ -1,3 +1,8 @@
+---
+description: "How do the guide's API calls, resources and alerts map onto Datadog, for a Java service on Kubernetes and AWS?"
+icon: dog
+---
+
 # Datadog
 
 Datadog for an example stack from previous work (a Java service on Kubernetes, on AWS, behind an ALB, using DynamoDB): server and edge API calls, resources and alerts, mapped with [tools.md](../../tools.md); the case study [APM trace enrichment](apm.md) covers span tags and retention. Vendor docs checked: 2026-10-01 for Building blocks, Limits, Translation and Gaps; the worked example's metric names are from previous work (check them in your account's Metrics Summary).

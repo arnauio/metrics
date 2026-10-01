@@ -1,6 +1,11 @@
+---
+description: "How should an AI agent apply these guides to a real system?"
+icon: robot
+---
+
 # Agents: running the guide with an AI agent
 
-How should an AI agent apply these guides to a real system? A small team can hand an agent most of the work: reading the code, querying the tools, triaging, drafting. This page sets what it may do and what it needs; the rules are this guide's position, as agent practice is still young. [AGENTS.md](https://github.com/arnauio/metrics/blob/main/AGENTS.md) routes it to the sections for each task.
+A small team can hand an agent most of the work: reading the code, querying the tools, triaging, drafting. This page sets what it may do and what it needs; the rules are this guide's position, as agent practice is still young. [AGENTS.md](https://github.com/arnauio/metrics/blob/main/AGENTS.md) routes it to the sections for each task.
 
 ## Rules
 

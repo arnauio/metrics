@@ -1,6 +1,11 @@
+---
+description: "What deserves a page, and which thresholds catch real problems without paging on noise?"
+icon: bell
+---
+
 # Alerts: what to page on, and how to set thresholds
 
-What deserves a page, and which thresholds catch real problems without paging on noise? Examples are Prometheus rules with illustrative metric names; the logic fits any backend. Numbers: `uv run src/calc.py burn --slo 99.9`, `poisson`, `wilson` ([analysis.md](analysis.md#formulas)).
+Examples are Prometheus rules with illustrative metric names; the logic fits any backend. Numbers: `uv run src/calc.py burn --slo 99.9`, `poisson`, `wilson` ([analysis.md](analysis.md#formulas)).
 
 ## Rules
 
@@ -57,6 +62,10 @@ Fire only when **both** windows exceed the burn rate. The short window is 1/12 o
 - **Shorter long window**: if the tool can't look back 3 days, keep the share of budget: burn rate = budget share × SLO period / window, so 10% in 24 h is 3× (`calc.py burn --ticket-hours 24`).
 - **SLI source**: counters taken before sampling, as in the example below, or a query over events with each one weighted by its sample rate. Weighted counts are estimates, so prefer counters at low traffic ([events.md](events.md#trade-offs)).
 
+<details>
+
+<summary>Prometheus rules: burn-rate alerts for a 99.9% SLO</summary>
+
 ```yaml
 groups:
   - name: api-slo
@@ -79,6 +88,8 @@ groups:
         expr: api:error_ratio:rate3d > 0.001 and api:error_ratio:rate6h > 0.001
         labels: { severity: ticket }
 ```
+
+</details>
 
 The example counts server-side 5xx for brevity; prefer client or edge counts, which also include timeouts and network failures ([kpis.md](kpis.md#measure-where-the-user-is)).
 
@@ -143,6 +154,7 @@ Set the floor so the threshold means several errors:
 
 Use this where the expected count is far below the threshold:
 
+{% code title="Prometheus rule: error count, gated to low traffic" %}
 ```yaml
 - alert: ErrorsLowTraffic
   expr: |
@@ -153,6 +165,7 @@ Use this where the expected count is far below the threshold:
     sum(increase(http_requests_total{service="api"}[5m])) < 3000
   labels: { severity: page }
 ```
+{% endcode %}
 
 - Safe because at a 0.02% baseline and < 3,000 requests per 5 minutes, a window expects ≤ 0.6 errors; 5 or more happen by chance < 0.04% of the time ([Poisson](analysis.md#formulas)).
 - **Your gate**: λ / your normal error rate, with λ small enough that `calc.py poisson --expected λ --k 5` is rare (λ = 0.6 at a 0.3% rate → 200 requests). Copying 3,000 at a higher rate fires on healthy traffic.

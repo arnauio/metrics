@@ -1,3 +1,8 @@
+---
+description: "When a key action takes several steps, how do you tell from request counters alone whether the whole flow works?"
+icon: route
+---
+
 # Journey metrics: flows, users, and requests
 
 When a key action is a multi-step flow, such as a login with an emailed one-time code, every per-call SLI can stay green while the flow breaks. This advanced chapter measures the whole flow, a **journey**, from request counters alone.
@@ -242,9 +247,18 @@ The plots below show what the text can't: how volume, real variation and a failu
 
 ### Volume: sampling noise
 
+{% tabs %}
+{% tab title="100 requests" %}
+
 <figure><img src="images/plot6.png" alt="C(t) with control limits, 100 requests per window"><figcaption><p>100 requests per window: C(t) bounces (σ ≈ 0.04), so the limits are wide, about ±0.13.</p></figcaption></figure>
 
+{% endtab %}
+{% tab title="1M requests" %}
+
 <figure><img src="images/plot14.png" alt="C(t) with control limits, 1M requests per window"><figcaption><p>1M requests per window: nearly flat, with limits about ±0.001.</p></figcaption></figure>
+
+{% endtab %}
+{% endtabs %}
 
 - Sampling noise shrinks with $$1/\sqrt{n}$$: 100× the traffic gives 10× tighter limits.
 - This assumes each request succeeds or fails independently. Real systems also vary from window to window.
@@ -253,17 +267,26 @@ The plots below show what the text can't: how volume, real variation and a failu
 
 **Jitter** models real variation (performance, time of day, load): in each window, each $$T_i$$ is drawn uniformly from $$T_i ± 0.05$$. $$T_4 = 1.0$$ can't go higher, so it stays fixed.
 
+{% tabs %}
+{% tab title="Fixed limits" %}
+
 <figure><img src="images/plot10.png" alt="C(t) with control limits, 1M requests per window, jitter 0.05"><figcaption><p>Same flow at 1M requests per window, with jitter: the mean is still about 73%, but the limits are about ±0.12, not ±0.001.</p></figcaption></figure>
 
 - Volume removes sampling noise, not real variation: a system that fluctuates by a few points per window does so at any scale.
 - Limits from volume alone (binomial σ) would be about ±0.001 here and fire on almost every healthy window. Measure σ from healthy windows instead ([analysis.md](analysis.md#sampling-noise-vs-real-variation)).
 - To detect smaller drops: bigger windows (15–30 min, slower detection), a moving average (adds lag), sustained-breach rules, or fixing the source of the variation.
 
+{% endtab %}
+{% tab title="Moving average" %}
+
 <figure><img src="images/plot15.png" alt="Moving average of C(t) with its control limits"><figcaption><p>Same data: a 5-window moving average (blue) vs the raw values (gray). The limits are about ±0.055 instead of ±0.12.</p></figcaption></figure>
 
 - The average of $$w$$ windows varies $$\sqrt{w}$$ times less, so its limits are $$\sqrt{5} \approx 2.2\times$$ tighter, and a smaller sustained drop crosses them.
 - Compute σ from the **raw** values and divide by $$\sqrt{w}$$. Neighbouring averages share 4 of their 5 inputs, so σ from the average's own moving ranges is far too small, and the limits fire on healthy traffic.
 - The cost is lag: about 2 windows on average for a sudden drop, and the full drop shows only after 5 windows (50 minutes with 10-minute windows).
+
+{% endtab %}
+{% endtabs %}
 
 ### OAuth2 device flow
 
@@ -287,7 +310,7 @@ The OAuth2 device flow ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628
 
 ## Part 5: Window sizing
 
-{% hint style="warning" %}
+{% hint style="danger" %}
 
 The most common mistake is a window too small for the flow.
 
@@ -425,12 +448,14 @@ Window size for the ratios follows the journey's timing ([Part 5](#part-5-window
 
 Example alert rule (pseudo-config):
 
+{% code title="Journey alert (pseudo-config)" %}
 ```text
 alert: AuthJourneyDegraded
 when:  auth_journey_success < 0.875 for 15m
 # 0.875 = μ − 3σ, with μ 0.92 and σ 0.015 measured on healthy windows
 # of a known-good period; fixed, not recomputed on a rolling window
 ```
+{% endcode %}
 
 Control charts for $$C(t)$$ and $$T_i(t)$$:
 - **Individuals chart**: simple, works when volume per window is roughly stable.
@@ -449,19 +474,34 @@ Did an API regression move a journey? Apply the [attribution recipe](analysis.md
 
 Notes for rolling this out in production.
 
-**Non-linear flows**
+<details>
+
+<summary>Non-linear flows</summary>
+
 - In practice each major branch is its own mostly sequential flow, tagged `flow=<journey>_<method>` (for example `flow=login_password`, `flow=login_sso`, `flow=login_webauthn`).
 - Retries are extra noise in $$A_i(t)$$ and $$T_i(t)$$ ([User behavior](#user-behavior-abandonment-and-retry)). Split out first attempts vs retries only if you need to distinguish "hard failures" from "eventual success after many retries".
 
-**SLIs, SLOs, and cost**
+</details>
+
+<details>
+
+<summary>SLIs, SLOs, and cost</summary>
+
 - Typical stack: per-endpoint availability + latency **and** the journey success rate $$C(t)$$ on top, with the [journey SLI](#what-these-metrics-tell-you) over a period.
 - Per-step SLOs locate the broken component; journey SLOs say whether the journey works.
 - A small, controlled `flow` tag adds predictable metric cardinality and is usually cheap in managed backends ([dashboards.md](dashboards.md#tagging-and-cardinality)).
 
-**Traffic mix, bots, and abuse**
+</details>
+
+<details>
+
+<summary>Traffic mix, bots, and abuse</summary>
+
 - Arrivals mix real users, automated clients and abusive sources. All of them count in $$A_i(t)$$, $$T_i(t)$$ and $$C(t)$$.
 - If the mix is **stable**, its effect is baked into your baseline and limits.
 - When abuse/bot traffic surges, you often see $$A_1(t)$$ spike and transitions drop.
+
+</details>
 
 ## When this approach fits
 

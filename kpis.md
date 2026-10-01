@@ -1,6 +1,11 @@
+---
+description: "What should we measure?"
+icon: bullseye
+---
+
 # KPIs: what to measure
 
-What should we measure? A product's KPIs, the key actions that move them, and the API calls and resources beneath each.
+A product's KPIs, the key actions that move them, and the API calls and resources beneath each.
 
 ## Rules
 
@@ -26,7 +31,7 @@ Each level is explained by the one below: business KPIs are driven by key action
 - Business KPIs are too noisy to alert on; API call SLIs per endpoint mean little to the business alone.
 - Multi-step flows (sign up → verify → first publish) are an advanced topic: [flows.md](flows.md).
 
-{% hint style="warning" %}
+{% hint style="danger" %}
 
 A business KPI that moved while no key action's calls did is not a reliability problem: look at product changes, marketing, seasonality.
 
@@ -125,7 +130,10 @@ USE per resource: **U**tilization, **S**aturation, **E**rrors.
 
 ## Connecting the levels: how an API call affects a KPI
 
-### Map it
+{% stepper %}
+{% step %}
+
+#### Map it
 
 Write this table for each key action; dashboards and impact estimates are built on it.
 
@@ -144,7 +152,10 @@ A key action's measures, including when it has several critical-path calls:
 - **Success rate**: the share of attempts in which every critical-path call succeeded. Measuring it needs the calls tied to their attempt, client-side or with wide events ([events.md](events.md)); per-call success rates are an approximation, and the calls' failure rates roughly add.
 - **Latency**: along the critical path: sequential calls add, parallel ones cost the slowest ([Estimate the effect](#estimate-the-effect-on-the-key-action)).
 
-### Estimate the effect on the key action
+{% endstep %}
+{% step %}
+
+#### Estimate the effect on the key action
 
 - **Errors pass through**: a critical-path call failing for a fraction $$e$$ of requests fails about $$e$$ of the key actions, and several critical-path calls' failure rates roughly add. Client retries lower it, but help less when failures are correlated, as they often are during real incidents. Across several steps errors multiply: [flows.md](flows.md) (advanced).
 - **Latency adds or maxes**: sequential critical-path calls add up; parallel ones cost the slowest. A slow call off the critical path doesn't slow the key action.
@@ -155,16 +166,25 @@ A key action's measures, including when it has several critical-path calls:
 
 <figure><img src="images/kpis/critical_path.png" alt="Waterfall of a page load: critical-path calls in red, non-critical in grey"><figcaption><p>Illustrative page load: it's usable at 430 ms = 80 (session) + 200 (the slower of two parallel calls) + 150 (blocks, which waits for the document). Both parallel calls block the page, but only the slower one sets the time: /permissions has 100 ms of slack. The 600 ms comments call ends later but doesn't delay "usable".</p></figcaption></figure>
 
-### Estimate the effect on the KPI
+{% endstep %}
+{% step %}
+
+#### Estimate the effect on the KPI
 
 - **Failed key actions** ≈ attempts per hour × drop in the key action's success rate × duration.
   - Example: 10,000 attempts/h × 5 points × 2 h = 1,000 failed key actions.
 - **Business impact** = failed key actions × share that never comes back and succeeds.
   - Measure that share from past incidents, if you can link retries to users (product analytics, [events.md](events.md)).
 
-### Verify with data
+{% endstep %}
+{% step %}
+
+#### Verify with data
 
 Check the estimate against the KPI with the [attribution recipe](analysis.md#did-it-move-the-kpi-an-attribution-recipe): like-with-like baseline, a control segment, confounders, sizing.
+
+{% endstep %}
+{% endstepper %}
 
 ## KPI definition checklist
 

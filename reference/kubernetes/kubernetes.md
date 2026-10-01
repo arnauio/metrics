@@ -1,3 +1,8 @@
+---
+description: "How do the guide's resource metrics, RED panels and burn-rate alerts map onto Kubernetes with Prometheus, Grafana and Alertmanager?"
+icon: server
+---
+
 # Kubernetes with Prometheus
 
 Prometheus (scraping the kubelet's cAdvisor endpoint, kube-state-metrics and node-exporter), Grafana and Alertmanager cover the [resources level](../../kpis.md#level-3-resources) and the server view of API calls, mapped with the [procedure](../../tools.md). Vendor docs checked: 2026-10-01.
@@ -55,6 +60,7 @@ Key action `save_document` ([KPI map](https://github.com/arnauio/metrics/blob/ma
 
 ### RED and USE panels
 
+{% code title="PromQL panels" overflow="wrap" %}
 ```promql
 # Key action dashboard: error ratio of the call (success rate = 1 - this), next to volume with offset 1w
 sum(rate(http_server_request_duration_seconds_count{job="editor-api", http_route="/documents/:id", http_request_method="PUT", http_response_status_code=~"5.."}[$__rate_interval]))
@@ -67,6 +73,7 @@ sum by (namespace, pod, container) (rate(container_cpu_cfs_throttled_periods_tot
 sum by (namespace, pod, container) (container_memory_working_set_bytes{container!=""}) / sum by (namespace, pod, container) (kube_pod_container_resource_limits{resource="memory"})
 increase(kube_pod_container_status_restarts_total[10m]) > 0 and on (namespace, pod, container) (kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1)
 ```
+{% endcode %}
 
 - Names: [cAdvisor](https://github.com/google/cadvisor/blob/master/docs/storage/prometheus.md), [kube-state-metrics pods](https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/pod-metrics.md). `container!=""` drops pod-level series (not verified). Group by Deployment through `kube_pod_owner` and [`kube_replicaset_owner`](https://github.com/kubernetes/kube-state-metrics/blob/main/docs/metrics/workload/replicaset-metrics.md).
 
@@ -78,6 +85,7 @@ $$14.4 \times 0.001 = 1.44\% \text{ (1h and 5m)}, \quad 6 \times 0.001 = 0.6\% \
 
 The rules are the [alerts.md example](../../alerts.md#slo-burn-rate-alerts) with the first query above, `[5m]` in place of `[$__rate_interval]`, recorded as `save_document:error_ratio:rate5m` (and 30m, 1h, 6h, 3d). What differs is the zero-traffic rule:
 
+{% code title="Zero-traffic rule" %}
 ```yaml
 - alert: SaveDocumentNoSuccess   # the burn rules return no data when traffic stops
   expr: |
@@ -86,6 +94,7 @@ The rules are the [alerts.md example](../../alerts.md#slo-burn-rate-alerts) with
   for: 5m
   labels: { severity: page }
 ```
+{% endcode %}
 
 - **Assumption**: "traffic expected" = traffic at this time last week. With a 5m `rate` and `for: 5m`, it pages about 10 minutes after traffic stops. **Server view only**: timeouts before the app need the ingress or a client source.
 

@@ -32,7 +32,9 @@ def check_links() -> list:
 	errors = []
 	for path in sorted(p for p in ROOT.rglob("*.md") if not {".jj", ".git", ".venv"} & set(p.parts)):
 		text = re.sub(r"```.*?```", "", path.read_text(), flags=re.S)
-		for target in re.findall(r"\]\(([^)\s]+)\)", text) + re.findall(r'<img[^>]*\ssrc="([^"]+)"', text):
+		targets = re.findall(r"\]\(([^)\s]+)\)", text) + re.findall(r'<img[^>]*\ssrc="([^"]+)"', text)
+		targets += re.findall(r'<a[^>]*\shref="([^"]+)"', text) + re.findall(r'{%\s*content-ref\s+url="([^"]+)"', text)
+		for target in targets:
 			if target.startswith(("http://", "https://", "mailto:")):
 				continue
 			file_part, _, fragment = target.partition("#")
@@ -67,6 +69,26 @@ def check_headings() -> list:
 	return errors
 
 
+def check_blocks() -> list:
+	"""GitBook blocks are closed, hints stay rare, and README stays plain for GitHub."""
+	pages = ["README.md"] + re.findall(r"\]\(([^)]+\.md)\)", (ROOT / "SUMMARY.md").read_text())
+	errors = []
+	for page in dict.fromkeys(pages):
+		text = re.sub(r"```.*?```", "", (ROOT / page).read_text(), flags=re.S)
+		for tag in ("hint", "tabs", "tab", "stepper", "step", "columns", "column", "code", "content-ref"):
+			opened = len(re.findall(r"{%%\s*%s[\s%%]" % re.escape(tag), text))
+			closed = len(re.findall(r"{%%\s*end%s\s*%%}" % re.escape(tag), text))
+			if opened != closed:
+				errors.append(f"{page}: {opened} {{% {tag} %}} vs {closed} {{% end{tag} %}}")
+		if text.count("<details") != text.count("</details>"):
+			errors.append(f"{page}: <details> not closed")
+		if (hints := len(re.findall(r"{%\s*hint\s", text))) > 2:
+			errors.append(f"{page}: {hints} hints; keep at most 2")
+	if "{%" in (ROOT / "README.md").read_text():
+		errors.append("README.md: GitBook {% %} blocks show as raw text on GitHub; use cards or <details> only")
+	return errors
+
+
 def check_numbers() -> list:
 	"""Recompute numbers the docs quote and check the docs still say them."""
 	pct = lambda value, digits: f"{value * 100:.{digits}f}%"
@@ -93,7 +115,7 @@ def check_numbers() -> list:
 
 if __name__ == "__main__":
 	failed = False
-	for name, check in [("links and anchors", check_links), ("headings slug the same on GitBook", check_headings), ("doc numbers vs calc.py", check_numbers)]:
+	for name, check in [("links and anchors", check_links), ("headings slug the same on GitBook", check_headings), ("GitBook blocks", check_blocks), ("doc numbers vs calc.py", check_numbers)]:
 		errors = check()
 		print(f"{'FAIL' if errors else 'ok  '} {name}")
 		for error in errors:

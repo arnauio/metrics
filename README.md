@@ -37,18 +37,24 @@ Show me the filled map and the plan before building anything.
 
 One question runs through the guide: **is the product working for users right now, and if not, what broke and did it matter?** Each file is a chapter that opens with its rules, then explains them.
 
-| # | Chapter | Answers |
-|---|---|---|
-| 1 | [signals.md](signals.md) | What the data is: logs, spans and metrics as events, metric types, RED/USE, OpenTelemetry |
-| 2 | [kpis.md](kpis.md) | What to measure: the KPI tree from business outcomes down to the key actions users take, their API calls and the resources behind them, and how an API call affects a KPI |
-| 3 | [analysis.md](analysis.md) | How to read the numbers honestly: noise vs real variation, intervals, baselines, and whether a change moved a KPI |
-| 4 | [dashboards.md](dashboards.md) | What to show: the dashboard set, panels, tagging, data sources |
-| 5 | [alerts.md](alerts.md) | What to page on: SLO burn rates, thresholds by metric type, low traffic |
-| 6 | [incidents.md](incidents.md) | When it breaks: triage, runbooks and reviews, at a high level |
-| 7 | [events.md](events.md) | Where the data comes from: one wide event per unit of work, metrics as projections of it, sampling, trade-offs |
-| 8 | [tools.md](tools.md) | How to apply it to your tools: inventory, limits, translation, gaps; tool pages under `reference/` |
-| 9 | [ai-agents.md](ai-agents.md) | How an AI agent applies the guides: access, what it may do, what it needs, how it reports |
-| 10 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |
+<table data-view="cards">
+<thead><tr>
+<th></th><th></th>
+<th data-hidden data-card-target data-type="content-ref"></th>
+</tr></thead>
+<tbody>
+<tr><td><strong>1. Signals</strong></td><td>What the data is: logs, spans and metrics as events, metric types, RED/USE, OpenTelemetry</td><td><a href="signals.md">signals.md</a></td></tr>
+<tr><td><strong>2. KPIs</strong></td><td>What to measure: the KPI tree from business outcomes down to the key actions users take, their API calls and the resources behind them, and how an API call affects a KPI</td><td><a href="kpis.md">kpis.md</a></td></tr>
+<tr><td><strong>3. Analysis</strong></td><td>How to read the numbers honestly: noise vs real variation, intervals, baselines, and whether a change moved a KPI</td><td><a href="analysis.md">analysis.md</a></td></tr>
+<tr><td><strong>4. Dashboards</strong></td><td>What to show: the dashboard set, panels, tagging, data sources</td><td><a href="dashboards.md">dashboards.md</a></td></tr>
+<tr><td><strong>5. Alerts</strong></td><td>What to page on: SLO burn rates, thresholds by metric type, low traffic</td><td><a href="alerts.md">alerts.md</a></td></tr>
+<tr><td><strong>6. Incidents</strong></td><td>When it breaks: triage, runbooks and reviews, at a high level</td><td><a href="incidents.md">incidents.md</a></td></tr>
+<tr><td><strong>7. Wide events</strong></td><td>Where the data comes from: one wide event per unit of work, metrics as projections of it, sampling, trade-offs</td><td><a href="events.md">events.md</a></td></tr>
+<tr><td><strong>8. Tools</strong></td><td>How to apply it to your tools: inventory, limits, translation, gaps; tool pages under <code>reference/</code></td><td><a href="tools.md">tools.md</a></td></tr>
+<tr><td><strong>9. Agents</strong></td><td>How an AI agent applies the guides: access, what it may do, what it needs, how it reports</td><td><a href="ai-agents.md">ai-agents.md</a></td></tr>
+<tr><td><strong>10. Journey metrics</strong></td><td>Advanced: journey metrics, for key actions that span several steps</td><td><a href="flows.md">flows.md</a></td></tr>
+</tbody>
+</table>
 
 - **flows.md** builds on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google): request counters per step, window sizing, simulations and an OAuth2 example.
 - **Tool-specific**: dated examples of [tools.md](tools.md) under `reference/`: [Datadog](reference/datadog/datadog.md) (plus [APM enrichment](reference/datadog/apm.md) for a Java service), [Cloudflare Workers](reference/cloudflare/cloudflare.md), [Amplitude](reference/amplitude/amplitude.md), [Kubernetes with Prometheus](reference/kubernetes/kubernetes.md), [Google Cloud](reference/gcp/gcp.md) and [AWS CloudWatch](reference/aws/cloudwatch.md).

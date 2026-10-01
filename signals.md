@@ -1,6 +1,11 @@
+---
+description: "What data sits under every dashboard and alert?"
+icon: signal-stream
+---
+
 # Signals: events, spans and metrics
 
-What data sits under every dashboard and alert? Events with fields, kept whole or counted into metrics. This page shows how logs, spans and metrics relate.
+Events with fields, kept whole or counted into metrics. This page shows how logs, spans and metrics relate.
 
 ## Rules
 
@@ -49,7 +54,13 @@ An event is a set of named fields and values, like a JSON document. The usual si
 | **Gauge** | A value that goes up and down | Not a count: a level read at a point in time | Queue depth, memory, connections (USE) |
 
 - **Aggregatable by design**: Bourgon defines metrics by being aggregatable. Counters add up across instances; histograms with the same buckets merge into a fleet percentile.
-- **Summaries don't merge.** Prometheus summaries compute quantiles per instance, and averaging per-instance p95s doesn't give a p95 ([pitfalls](analysis.md#pitfalls)). Use histograms.
+
+{% hint style="danger" %}
+
+**Summaries don't merge.** Prometheus summaries compute quantiles per instance, and averaging per-instance p95s doesn't give a p95 ([pitfalls](analysis.md#pitfalls)). Use histograms.
+
+{% endhint %}
+
 - **Derived from sampled events**, a metric is an estimate. Weight each event by its sample rate: Meta's Scuba counts `SUM(samplingRate)` rather than rows (Burmistrov).
 - **Emitting RED**: record one duration histogram per request in the middleware that emits the wide event, with the route and status as attributes. Its count gives the rate and the errors, so no separate counter is needed. OpenTelemetry names it [`http.server.request.duration`](https://opentelemetry.io/docs/specs/semconv/http/http-metrics/), in seconds.
 - **Infrastructure stays on metrics**: they're cheap and cover what you need to know about it. CPU and memory readings attached to spans help debugging, but alert on the metrics.

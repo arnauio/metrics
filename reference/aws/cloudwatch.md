@@ -1,3 +1,8 @@
+---
+description: "How do the guide's API-call SLIs, resource metrics and burn-rate alerts map onto AWS CloudWatch?"
+icon: aws
+---
+
 # AWS CloudWatch
 
 CloudWatch covers the server view of the [KPI tree](../../kpis.md#the-kpi-tree): API calls counted from wide events in CloudWatch Logs, AWS resource metrics, and the alerts on them. Vendor docs checked: 2026-10-01. Method: [tools.md](../../tools.md).
@@ -50,9 +55,11 @@ CloudWatch covers the server view of the [KPI tree](../../kpis.md#the-kpi-tree):
 
 Key action `save_document`, critical-path call `PUT /documents/:id`, example SLO 99.9% over 30 days. Errors are 5xx ([what counts](../../kpis.md#what-counts-as-an-error)). One JSON log per request ([events.md](../../events.md)):
 
+{% code title="One JSON log per request" %}
 ```json
 {"route": "/documents/:id", "key_action": "save_document", "status": 503, "duration_ms": 412}
 ```
+{% endcode %}
 
 - **Metric filters** (namespace `App/API`, dimensions `key_action: $.key_action`, `route: $.route`): `Requests` on `{ $.route = "*" }`, value 1; `Errors` on `{ $.status >= 500 }`, value 1; `Latency` on `{ $.duration_ms = * }`, value `$.duration_ms`. EMF alternative: the same event with an `_aws` block naming these metrics and the dimension set `[["key_action", "route"]]`.
 - **SLI and panel**: `1 - err / req` with period 30 days for the SLI; a widget with `1 - err / req` and `req` (right axis) at 5 minutes for the [key action panel](../../dashboards.md#dashboard-2-key-action-one-per-key-action).
@@ -65,10 +72,12 @@ Key action `save_document`, critical-path call `PUT /documents/:id`, example SLO
   - short windows use `IF(req >= MIN_REQ, err / req)`, with `MIN_REQ` the [volume floor](../../alerts.md#require-enough-volume) that `calc.py burn` prints (348 and 834 for the page pairs).
 - **Composite alarms** carry the actions:
 
+{% code title="Composite alarm rules" %}
 ```text
 page:   (ALARM(burn-1h) AND ALARM(burn-5m)) OR (ALARM(burn-6h) AND ALARM(burn-30m))
 ticket: ALARM(burn-3d) AND ALARM(burn-6h-ticket)
 ```
+{% endcode %}
 
 - **No traffic**: one more alarm on `req - err` below 1 over 5 minutes, `TreatMissingData: breaching`, while traffic is expected ([zero traffic](../../alerts.md#durations-windows-and-false-alarms)).
 - **Application Signals alternative**: a request-based SLO on any CloudWatch metric (bad requests `Errors`, total `Requests`), with [burn rates](https://docs.aws.amazon.com/applicationsignals/latest/APIReference/API_BurnRateConfiguration.html) over 5, 30, 60, 360 and 4,320 minutes (allowed 1 to 10,080), alarms at 14.4, 6 and 1, and the same composites. With no data it computes burn rate from attainment, so keep the no-traffic alarm.

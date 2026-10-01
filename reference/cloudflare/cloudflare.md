@@ -1,3 +1,8 @@
+---
+description: "How do you get per-route RED, SLIs and burn-rate alerts for an API served by a Cloudflare Worker?"
+icon: cloudflare
+---
+
 # Cloudflare Workers
 
 For an API served by a Worker, Cloudflare covers the edge and server levels of the [KPI tree](../../kpis.md#the-kpi-tree); per-route RED and burn-rate alerts need data and a schedule you add yourself ([method](../../tools.md)). Vendor docs checked: 2026-10-01.
@@ -47,6 +52,7 @@ For an API served by a Worker, Cloudflare covers the edge and server levels of t
 
 Example key action Save, critical-path call `PUT /documents/:id` ([Map it](../../kpis.md#map-it)); example SLO 99.9%. The API Worker logs a [wide event](../../events.md#the-wide-event-way-one-event) `{type: "request", key_action, route, error, error_expected}`; the Tail Worker adds `outcome` and status ([What counts as an error](../../kpis.md#what-counts-as-an-error)). Reading the object from `message[0]` is not verified.
 
+{% code title="Tail Worker" overflow="wrap" %}
 ```js
 const w = ev.logs.map((l) => l.message[0]).find((m) => m?.type === "request") ?? {};
 const status = ev.event?.response?.status ?? 0;
@@ -54,11 +60,14 @@ const canceled = ev.outcome === "canceled"; // the client went away: a timeout o
 const failed = canceled || ev.outcome !== "ok" || status >= 500 || (w.error && !w.error_expected);
 env.API_SLI.writeDataPoint({ indexes: [w.key_action ?? "unknown"], blobs: [w.route ?? "unknown"], doubles: [failed ? 1 : 0, canceled ? 1 : 0] });
 ```
+{% endcode %}
 
+{% code title="Analytics Engine SQL: 30-day SLI" %}
 ```sql
 SELECT sumIf(_sample_interval, double1 = 0) / SUM(_sample_interval) AS sli, SUM(_sample_interval) AS attempts
 FROM api_sli WHERE index1 = 'save_document' AND timestamp > NOW() - INTERVAL '30' DAY
 ```
+{% endcode %}
 
 - **Canceled** counts as failed, because a client that gave up on a call it waits on saw a timeout ([what counts as an error](../../kpis.md#what-counts-as-an-error)); `double2` keeps it as its own rate, to tell timeouts from other failures.
 - **Panel** ([key action dashboard](../../dashboards.md#dashboard-2-key-action-one-per-key-action)): the same query in Grafana, grouped per 5 minutes, success rate next to attempts.

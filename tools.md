@@ -1,6 +1,11 @@
+---
+description: "How do you apply these guides to the tools you have?"
+icon: screwdriver-wrench
+---
+
 # Tools: map the guide onto yours
 
-How do you apply these guides to the tools you have? Read the vendor's own docs, find the tool's version of each idea, and write down what's missing. Tool pages in the Reference section are filled examples.
+Read the vendor's own docs, find the tool's version of each idea, and write down what's missing. [Tool pages](#tool-pages) in the Reference section are filled examples.
 
 ## Rules
 
@@ -55,3 +60,17 @@ A tool page lives under `reference/<tool>/`, with these headings so pages compar
 - Short: what a reader needs to start, with links for the rest. Drop rows the tool doesn't cover and say which tool does.
 - One page per stack when its tools ship together (Prometheus, Grafana, Alertmanager).
 - Mark anything the docs don't state as "not verified"; if two vendor pages disagree, cite both.
+
+## Tool pages
+
+<table data-view="cards">
+<thead><tr><th></th><th></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead>
+<tbody>
+<tr><td><strong>Datadog</strong></td><td>Server and edge API calls, resources and alerts, with an APM case study.</td><td><a href="reference/datadog/datadog.md">datadog.md</a></td></tr>
+<tr><td><strong>Cloudflare Workers</strong></td><td>The edge and server levels, for an API served by a Worker.</td><td><a href="reference/cloudflare/cloudflare.md">cloudflare.md</a></td></tr>
+<tr><td><strong>Amplitude</strong></td><td>Business KPIs and key actions from client events; not a pager.</td><td><a href="reference/amplitude/amplitude.md">amplitude.md</a></td></tr>
+<tr><td><strong>Kubernetes with Prometheus</strong></td><td>Resources and the server view of API calls, with Grafana and Alertmanager.</td><td><a href="reference/kubernetes/kubernetes.md">kubernetes.md</a></td></tr>
+<tr><td><strong>Google Cloud</strong></td><td>Cloud Logging and Monitoring: the server level and page alerts on API calls.</td><td><a href="reference/gcp/gcp.md">gcp.md</a></td></tr>
+<tr><td><strong>AWS CloudWatch</strong></td><td>The server view: API calls from logs, AWS resource metrics, and alerts.</td><td><a href="reference/aws/cloudwatch.md">cloudwatch.md</a></td></tr>
+</tbody>
+</table>

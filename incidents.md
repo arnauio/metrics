@@ -1,6 +1,11 @@
+---
+description: "What do you do when something breaks, at a high level?"
+icon: fire-extinguisher
+---
+
 # Incidents: triage, runbooks and reviews
 
-What to do when something breaks, at a high level. The other chapters supply the measurements; the references cover incident process in depth, written for large orgs (skip the roles).
+The other chapters supply the measurements; the references cover incident process in depth, written for large orgs (skip the roles).
 
 ## Rules
 
@@ -12,11 +17,37 @@ What to do when something breaks, at a high level. The other chapters supply the
 
 ## Triage, top down
 
-1. **Scope**: which key actions, since when, for whom ([key action dashboard](dashboards.md#dashboard-2-key-action-one-per-key-action)). Compare with the same window last week to confirm it's real ([baselines](analysis.md#baselines-and-seasonality)).
-2. **What changed**: deploys, config and flag changes at the start time ([change timeline](dashboards.md#dashboard-5-changes-and-incidents)). Several at once → let the vantage point pick: client-only failures point to the frontend; check the success rate by release.
-3. **Mitigate**: roll back, turn the flag off, drain, scale out, or block the bad traffic. A frontend rollback doesn't reach tabs that already loaded the old code. Check it worked on the SLI that alerted.
-4. **Locate**: client, edge or origin ([vantage points](kpis.md#measure-where-the-user-is)); one instance or all ([outliers](analysis.md#outliers)); then the [dependencies](dashboards.md#dashboard-4-dependencies-and-resources). Group the failing requests' events by any field to see what they share ([queries](events.md#common-queries)).
-5. **Size it**: excess failed key actions ([estimate the effect](kpis.md#estimate-the-effect-on-the-kpi)), with `uv run src/calc.py wilson <failed> <attempts> --baseline <rate>`; its interval on the excess is (each Wilson bound − baseline) × attempts.
+{% stepper %}
+{% step %}
+#### Scope
+
+Which key actions, since when, for whom ([key action dashboard](dashboards.md#dashboard-2-key-action-one-per-key-action)). Compare with the same window last week to confirm it's real ([baselines](analysis.md#baselines-and-seasonality)).
+{% endstep %}
+
+{% step %}
+#### What changed
+
+Deploys, config and flag changes at the start time ([change timeline](dashboards.md#dashboard-5-changes-and-incidents)). Several at once → let the vantage point pick: client-only failures point to the frontend; check the success rate by release.
+{% endstep %}
+
+{% step %}
+#### Mitigate
+
+Roll back, turn the flag off, drain, scale out, or block the bad traffic. A frontend rollback doesn't reach tabs that already loaded the old code. Check it worked on the SLI that alerted.
+{% endstep %}
+
+{% step %}
+#### Locate
+
+Client, edge or origin ([vantage points](kpis.md#measure-where-the-user-is)); one instance or all ([outliers](analysis.md#outliers)); then the [dependencies](dashboards.md#dashboard-4-dependencies-and-resources). Group the failing requests' events by any field to see what they share ([queries](events.md#common-queries)).
+{% endstep %}
+
+{% step %}
+#### Size it
+
+Excess failed key actions ([estimate the effect](kpis.md#estimate-the-effect-on-the-kpi)), with `uv run src/calc.py wilson <failed> <attempts> --baseline <rate>`; its interval on the excess is (each Wilson bound − baseline) × attempts.
+{% endstep %}
+{% endstepper %}
 
 ## Running the incident
 

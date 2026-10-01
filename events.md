@@ -1,3 +1,8 @@
+---
+description: "What is a wide event, and how do you emit and query one?"
+icon: wave-pulse
+---
+
 # Wide events: one event per unit of work
 
 A wide event captures **all the context** about a unit of work (like an HTTP request) in a **single event**, rather than scattering it across log lines. Events are the source: a log line and a span are both events with fields, and metrics are a cheap projection of them: counted before sampling, they cover all traffic, for alerts and long retention.
@@ -93,7 +98,10 @@ Field names follow [OpenTelemetry semantic conventions](https://opentelemetry.io
 - **`duration_ms`** is the whole request. The `*.duration_ms` fields break it down.
 - **`error` and `error.expected`** are on every event, `false` when nothing went wrong, so a filter like `error.expected = false` drops none.
 
-## Example 1: successful login
+## Examples
+
+{% tabs %}
+{% tab title="Successful login" %}
 
 | Offset | Duration | Step |
 |---|---|---|
@@ -111,7 +119,9 @@ Everything in that timeline ends up in the event above: one row, queryable on an
 - "Which auth methods are slowest?": `P99(duration_ms)` grouped by `auth.method`
 - "What's the p99 for password verification?": `P99(auth.duration_ms)` where `auth.method = password`
 
-## Example 2: failed login (rate limited)
+{% endtab %}
+
+{% tab title="Failed login (rate limited)" %}
 
 A 4 ms request rejected by the rate limiter before the user lookup:
 
@@ -133,10 +143,14 @@ A 4 ms request rejected by the rate limiter before the user lookup:
 - **A script, not a browser**: group rate-limited requests by `client.address` to tell one noisy client from a distributed attack.
 - **`error.expected: true`**: failed as designed. Usually excluded from availability SLOs but tracked on its own ([kpis.md](kpis.md#what-counts-as-an-error)).
 
+{% endtab %}
+{% endtabs %}
+
 ## Common queries
 
 The queries below are written in the style of Honeycomb's query builder (`VISUALIZE` / `WHERE` / `GROUP BY`). The shape is the same in Datadog Log/Trace Explorer or SQL over ClickHouse.
 
+{% code title="Honeycomb-style queries" %}
 ```text
 -- Which routes are slowest for premium users?
 VISUALIZE P99(duration_ms)
@@ -161,6 +175,7 @@ VISUALIZE AVG(is_error), COUNT
 WHERE     error.expected = false
 GROUP BY  service.version
 ```
+{% endcode %}
 
 Notes:
 
@@ -182,10 +197,17 @@ The same idea, emitted from the client to a product-analytics tool for the [busi
 Wide events aren't free:
 
 - **Cost.** Every event is stored whole, so cost grows with volume × width. Metrics are aggregated when they're written, so they stay cheap as traffic grows, as long as their tags stay bounded.
-- **Sampling.** At high volume you'll keep only some events.
-  - *Head sampling* decides when the request starts. It's cheap, but it drops rare errors along with everything else.
-  - *Tail sampling* decides after the request ends: keep all errors and slow requests, sample the rest. It needs a buffer, for example the OpenTelemetry Collector's tail sampling processor, and all spans of a trace must reach the same collector instance, so put a trace-ID-aware load-balancing exporter in front.
-  - Record the rate on each event (`sample_rate: 20` means "this event stands for 20"), so counts can be re-weighted. Counts from sampled data are estimates.
+- **Sampling.** At high volume you'll keep only some events. Record the rate on each event (`sample_rate: 20` means "this event stands for 20"), so counts can be re-weighted. Counts from sampled data are estimates.
+
+<details>
+
+<summary>Head vs tail sampling</summary>
+
+- *Head sampling* decides when the request starts. It's cheap, but it drops rare errors along with everything else.
+- *Tail sampling* decides after the request ends: keep all errors and slow requests, sample the rest. It needs a buffer, for example the OpenTelemetry Collector's tail sampling processor, and all spans of a trace must reach the same collector instance, so put a trace-ID-aware load-balancing exporter in front.
+
+</details>
+
 - **SLOs and alerts.** Their data must count all traffic. Two ways:
   - *Counters taken before sampling*: metrics, or the trace or span metrics an APM tool computes before it samples. The simpler default ([alerts.md](alerts.md#slo-burn-rate-alerts)).
   - *Sampled events weighted by `sample_rate`*: each event counts as the requests it stands for. Unweighted, counts read low, and error rates read high if the sampler keeps every error. Weighted counts are estimates: noisier than counters, especially at low traffic, and right only if each event records its true rate.

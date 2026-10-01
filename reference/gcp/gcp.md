@@ -1,3 +1,8 @@
+---
+description: "How do the guide's API-call SLIs and burn-rate alerts map onto Google Cloud Logging and Monitoring?"
+icon: google
+---
+
 # Google Cloud Logging and Monitoring
 
 For a service that writes one structured log per request, Cloud Logging and Cloud Monitoring cover the server level of the [KPI tree](../../kpis.md#the-kpi-tree) and the page alerts on its API calls; the 3-day ticket window doesn't fit, so the ticket pair uses 24 hours ([method](../../tools.md)). Vendor docs checked: 2026-10-01.
@@ -49,21 +54,25 @@ For a service that writes one structured log per request, Cloud Logging and Clou
 
 Example key action Save, critical-path call `PUT /documents/:id` ([Map it](../../kpis.md#map-it)); example SLO 99.9% over 30 days. The service logs one [wide event](../../events.md#the-wide-event-way-one-event) per request; errors are 5xx and unexpected errors ([What counts as an error](../../kpis.md#what-counts-as-an-error)).
 
+{% code title="Logs-based metrics" overflow="wrap" %}
 ```sh
 F='jsonPayload.main=true AND jsonPayload.key_action="save_document"'
 gcloud logging metrics create save_requests --description="Save: requests" --log-filter="$F"
 gcloud logging metrics create save_errors --description="Save: failed requests" \
   --log-filter="$F AND (httpRequest.status>=500 OR (jsonPayload.error=true AND jsonPayload.\"error.expected\"=false))"
 ```
+{% endcode %}
 
 - **SLI**: a custom service with a request-based SLO, `goal: 0.999`, `rollingPeriod: "2592000s"`, `totalServiceFilter` on `logging.googleapis.com/user/save_requests` and `badServiceFilter` on `.../save_errors`.
 - **Panel** ([key action dashboard](../../dashboards.md#dashboard-2-key-action-one-per-key-action)): `select_slo_health` next to `save_requests` per 5 minutes, with Compare to Past at 1 week.
 - **Page alert**: `uv run src/calc.py burn --slo 99.9` gives burn rates 14.4× (1 h and 5 min) and 6× (6 h and 30 min) ([burn rates](../../alerts.md#slo-burn-rate-alerts)). The burn-rate selector returns the burn rate itself, so the threshold is 14.4, not 1.44%. One policy per pair, combiner AND:
 
+{% code title="Burn-rate conditions, combiner AND" overflow="wrap" %}
 ```text
 select_slo_burn_rate("projects/PROJECT_ID/services/SERVICE_ID/serviceLevelObjectives/SLO_ID", "3600s") > 14.4
 select_slo_burn_rate("projects/PROJECT_ID/services/SERVICE_ID/serviceLevelObjectives/SLO_ID", "300s")  > 14.4
 ```
+{% endcode %}
 
 - **Delay**: points can arrive up to 10 minutes late, longer than the 5-minute window; how the pair behaves then is not verified.
 - **Without SLO objects**: a PromQL condition on `logging_googleapis_com:user_save_errors` over `..._save_requests`, the two windows joined with `and`. `rate()` on these metrics appears only in a [vendor blog](https://cloud.google.com/blog/products/management-tools/bucket-scoped-log-based-metrics-now-ga/); not verified in the docs.

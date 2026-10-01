@@ -1,6 +1,11 @@
+---
+description: "What should we show: which dashboards, panels and data?"
+icon: table-columns
+---
+
 # Dashboards: what to build
 
-What should we show? Which dashboards, panels and data. Builds on the [KPI tree](kpis.md#the-kpi-tree): the dashboards follow its levels.
+Builds on the [KPI tree](kpis.md#the-kpi-tree): the dashboards follow its levels.
 
 ## Rules
 
@@ -29,13 +34,16 @@ A dashboard can only break down by dimensions recorded as tags or fields.
 
 ## The dashboard set
 
-| # | Dashboard | Level | Question |
-|---|---|---|---|
-| 1 | KPI overview | 1–2 | "Is the product healthy, and is anything hurting it?" |
-| 2 | Key action (one per key action) | 2 | "Does this key action work, and which call broke?" |
-| 3 | API calls: frontend → backend | 2 | "Which calls are failing or slow, as users see them?" |
-| 4 | Dependencies and resources | 3 | "What is limiting the calls?" |
-| 5 | Changes and incidents | all | "What changed, and what did it do?" |
+<table data-view="cards">
+<thead><tr><th>Dashboard</th><th>Level and question</th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead>
+<tbody>
+<tr><td><strong>1. KPI overview</strong></td><td>Level 1–2: "Is the product healthy, and is anything hurting it?"</td><td><a href="#dashboard-1-kpi-overview">#dashboard-1-kpi-overview</a></td></tr>
+<tr><td><strong>2. Key action (one per key action)</strong></td><td>Level 2: "Does this key action work, and which call broke?"</td><td><a href="#dashboard-2-key-action-one-per-key-action">#dashboard-2-key-action-one-per-key-action</a></td></tr>
+<tr><td><strong>3. API calls: frontend → backend</strong></td><td>Level 2: "Which calls are failing or slow, as users see them?"</td><td><a href="#dashboard-3-api-calls-frontend-to-backend">#dashboard-3-api-calls-frontend-to-backend</a></td></tr>
+<tr><td><strong>4. Dependencies and resources</strong></td><td>Level 3: "What is limiting the calls?"</td><td><a href="#dashboard-4-dependencies-and-resources">#dashboard-4-dependencies-and-resources</a></td></tr>
+<tr><td><strong>5. Changes and incidents</strong></td><td>All levels: "What changed, and what did it do?"</td><td><a href="#dashboard-5-changes-and-incidents">#dashboard-5-changes-and-incidents</a></td></tr>
+</tbody>
+</table>
 
 Drill-down: KPI tile (dashboard 1) → its key action (dashboard 2) → the key action's calls (dashboard 3) → their dependencies (dashboard 4). Dashboard 5's change markers overlay all of them.
 
@@ -103,7 +111,11 @@ The first stop in [triage](incidents.md#triage-top-down) after scoping: what cha
 | New errors | Error groups first seen since the last deploy | List (from the error tracker) |
 | Current state | Last 15 minutes: key action success rate, error rate, p99, traffic | Stat tiles |
 
+{% hint style="success" %}
+
 **Release check**: after a deploy, compare the new version's error rate with the old one's over the same window ([version query](events.md#common-queries)), and test the difference with `calc.py ztest`.
+
+{% endhint %}
 
 ## Map to your stack
 

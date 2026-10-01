@@ -1,8 +1,13 @@
+---
+description: "How do the guide's KPIs, key actions and alerts map onto Amplitude, and where does it fall short?"
+icon: chart-column
+---
+
 # Amplitude
 
 Amplitude is product analytics: it covers the business KPIs (level 1 of the [KPI tree](../../kpis.md#the-kpi-tree)) and key actions measured from client events, but it isn't a pager, as alerts evaluate hourly at best and go to email or Slack. Vendor docs checked: 2026-10-01.
 
-{% hint style="warning" %}
+{% hint style="danger" %}
 Don't page from Amplitude. Page on the key action from client RUM or edge counts ([Measure where the user is](../../kpis.md#measure-where-the-user-is)); use Amplitude for segments, the ticket-level view and business KPIs.
 {% endhint %}
 
@@ -32,7 +37,7 @@ Don't page from Amplitude. Page on the key action from client RUM or edge counts
 
 | Guide concept | How in Amplitude |
 |---|---|
-| [Key action SLI](../../kpis.md#measure-where-the-user-is) 1 − `TOTALS` of failed attempts / `TOTALS` of attempts; Event Totals, not Uniques |
+| [Key action SLI](../../kpis.md#measure-where-the-user-is) | 1 − `TOTALS` of failed attempts / `TOTALS` of attempts; Event Totals, not Uniques |
 | [What counts as an error](../../kpis.md#what-counts-as-an-error) | An `outcome` property set by the client: `success`, `expected_error`, `error` |
 | Latency percentiles | `PERCENTILE(A, 0.95)` grouped by an integer `duration_ms` |
 | [Burn-rate pair](../../alerts.md#slo-burn-rate-alerts) | Ticket level on a chart only: `ROLLWIN` over 72 and 6 hours |
@@ -54,9 +59,11 @@ Don't page from Amplitude. Page on the key action from client RUM or edge counts
 
 Key action "save a document" ([Map it](../../kpis.md#map-it)), one event per attempt ([events.md](../../events.md#the-wide-event-way-one-event)), emitted after the client's last retry:
 
+{% code title="Save Document event" overflow="wrap" %}
 ```json
 {"event_type": "Save Document", "event_properties": {"key_action": "save_document", "outcome": "error", "error.type": "timeout", "http.response.status_code": null, "duration_ms": 8000, "retries": 2}}
 ```
+{% endcode %}
 
 - **Panel**: Event Segmentation, A = `Save Document`, B = A where `outcome` = `error`, formula `%:TOTALS(B)/TOTALS(A)`. Next to it, Event Totals of A with Previous week.
 - **Error rate over 30 days** (1 − SLI): daily chart, `%:ROLLWIN(TOTALS, B, 30)/ROLLWIN(TOTALS, A, 30)`.
