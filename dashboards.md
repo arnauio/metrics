@@ -103,7 +103,7 @@ Percentiles don't subtract: client p95 minus server p95 is only a rough sign.
 
 ## Map to your stack
 
-Fill in your own tools; the examples are typical per source type.
+Fill in your own tools; the examples are typical per source type. To translate the panels and alerts into one tool, follow [tools.md](tools.md).
 
 | Signal | Source type | Examples |
 |---|---|---|

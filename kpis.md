@@ -89,6 +89,8 @@ RED per call: **R**ate, **E**rror rate, **D**uration (p50, p95, p99) ([RED and U
 | **Server** (wide events, spans) | Handler time, errors, dependency calls | Queueing before the server, network, the client |
 
 - **RED is computed per vantage point**: per call, a count, an error count and a latency distribution over the requests seen at that vantage point. For alerts, count it before sampling, or weight each event by its sample rate ([events.md](events.md#trade-offs)).
+- **Count attempts, not users**: the SLI is successful attempts / attempts. Product-analytics tools often default to unique users.
+- **Each vantage point has blind spots.** Client events get lost or arrive late, so cross-check them with edge counts. With only the server, page on it and list the missing client or edge source as a gap.
 - The client–server gap is a signal: client errors the server never logged, or client latency far above server latency → likely a network, edge or frontend problem.
 
 ### What counts as an error
@@ -116,6 +118,7 @@ USE per resource: **U**tilization, **S**aturation, **E**rrors.
 |---|---|
 | Database | Query latency, connections, rows read |
 | Workers | CPU, memory, concurrency |
+| Containers | CPU vs request and limit, CPU throttling, memory working set vs limit, OOM kills and restarts |
 | Queues | Depth, age of the oldest item |
 | Caches | Hit rate, evictions |
 | Third-party APIs | Their RED |

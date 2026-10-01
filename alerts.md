@@ -51,6 +51,8 @@ Fire only when **both** windows exceed the burn rate. The short window is 1/12 o
   - 99.9% SLO: 1.44%, 0.6%, 0.1%
   - 99.95% SLO: 0.72%, 0.30%, 0.05%
 - **Latency SLOs**: SLI = fraction of requests faster than a threshold (e.g. 500 ms). Alert on the burn rate of the slower fraction the same way.
+- **Count requests, not bad minutes.** A time-slice SLO (share of good minutes) weighs a quiet minute like a busy one.
+- **Shorter long window**: if the tool can't look back 3 days, keep the share of budget: burn rate = budget share × SLO period / window, so 10% in 24 h is 3× (`calc.py burn --ticket-hours 24`).
 - **SLI source**: counters taken before sampling, as in the example below, or a query over events with each one weighted by its sample rate. Weighted counts are estimates, so prefer counters at low traffic ([events.md](events.md#trade-offs)).
 
 ```yaml
@@ -109,7 +111,7 @@ Pitfalls:
 
 ### Static vs dynamic thresholds
 
-- Dynamic (rolling baselines) adapt to growth, but a degraded week becomes the new normal ([analysis.md](analysis.md#baselines-and-seasonality)), and they're harder to debug. Never let one rise above the load-tested limit.
+- Dynamic (rolling baselines) adapt to growth, but a degraded week becomes the new normal ([analysis.md](analysis.md#baselines-and-seasonality)), and they're harder to debug. Never let one rise above the load-tested limit. A vendor's anomaly detection trained on recent history is a rolling baseline too.
 - Capacity: prefer static thresholds.
 - Ratios without an SLO: fixed control limits from a known-good period, updated deliberately.
 
@@ -121,7 +123,7 @@ At 600 requests per window, one error = 0.17%. Two fixes: require enough volume,
 
 Set the floor so the threshold means several errors:
 
-- Minimum requests per evaluation window ≈ 5 / threshold rate (at 0.03% → ~17,000). For a burn-rate pair, apply it to the short window (5m or 30m).
+- Minimum requests per evaluation window ≈ 5 / threshold rate (at 0.03% → ~17,000). For a burn-rate pair, apply it to the short window (5m or 30m); `calc.py burn` prints it per pair.
 - State when that floor silences the rule (often nights, weekends) and what covers those hours.
 - Leave headroom: a threshold close to the baseline still fires by chance. At a 0.02% baseline, a 0.03% threshold (1.5×) trips ~12% of healthy 17,000-request windows, and below 1% only from ~120,000 requests.
 
@@ -154,7 +156,7 @@ Use this where the expected count is far below the threshold:
 
 {% hint style="warning" %}
 
-**Zero traffic**: a ratio over no requests is no data, not 0% ([pitfalls](analysis.md#pitfalls)), so an error-rate rule goes silent during an outage. Alert separately on no successful requests for 5 minutes while traffic is expected.
+**Zero traffic**: a ratio over no requests is no data, not 0% ([pitfalls](analysis.md#pitfalls)), so an error-rate rule goes silent during an outage. Alert separately on no successful requests for 5 minutes while traffic is expected (the same window last week had traffic, or the [time-of-week baseline](#traffic-volume) is above zero).
 
 {% endhint %}
 

@@ -20,12 +20,12 @@ Tool-agnostic guides for observability work: choosing KPIs, designing dashboards
 | Choose a window size for step ratios (journeys) | [flows.md Part 5](flows.md#part-5-window-sizing) | `calc.py spillover --gap <avg gap> --window <W>` | Average time between steps and for the whole journey |
 | Tags, cardinality, metric cost | [dashboards.md: Tagging and cardinality](dashboards.md#tagging-and-cardinality) | | Current tags and their value counts |
 | High-cardinality debugging, wide events, sampling | [events.md](events.md), [Trade-offs](events.md#trade-offs) | | |
-| Datadog specifics (APM retention, metric names, pricing) | [reference/datadog/](reference/datadog/datadog.md) | Only if the user is on Datadog | |
+| Apply the guides to a specific tool (Datadog, Cloudflare, Amplitude, GCP, AWS, Prometheus, ...) | [tools.md](tools.md); the tool's page under `reference/` if there is one (Datadog: APM retention and pricing in [apm.md](reference/datadog/apm.md)) | Fill in [templates/tool-map.yaml](templates/tool-map.yaml) from the vendor's docs or `llms.txt`; never copy another tool's names or limits | Which tools cover which source; plan or tier, if limits depend on it |
 | Learn journey metrics in depth | [flows.md](flows.md) | The advanced chapter, with plots; not needed for the other chapters | |
 
 Terms (key action, SLI, SLO, error budget, burn rate, control limits, points): [kpis.md: Glossary](kpis.md#glossary). Journey notation ($A_i$, $T_i$, $C$): [flows.md: From flows to metrics](flows.md#from-flows-to-metrics).
 
-Every guide opens with a `## Rules` section: its summary, with links into the body. When a task only needs the rules, read those first: [signals](signals.md#rules) · [kpis](kpis.md#rules) · [analysis](analysis.md#rules) · [dashboards](dashboards.md#rules) · [alerts](alerts.md#rules) · [events](events.md#rules) · [flows](flows.md#rules).
+Every guide opens with a `## Rules` section: its summary, with links into the body. When a task only needs the rules, read those first: [signals](signals.md#rules) · [kpis](kpis.md#rules) · [analysis](analysis.md#rules) · [dashboards](dashboards.md#rules) · [alerts](alerts.md#rules) · [events](events.md#rules) · [tools](tools.md#rules) · [flows](flows.md#rules).
 
 ## Rules when applying the guides
 
@@ -54,14 +54,15 @@ uv run src/check.py                             # check docs: links, anchors, qu
 ```
 
 - [templates/kpi-map.yaml](templates/kpi-map.yaml): the structure to fill in when choosing KPIs and mapping key actions to API calls (journeys optional). It's the input a dashboard or hub needs.
+- [templates/tool-map.yaml](templates/tool-map.yaml): one per tool, to translate the guide's building blocks into it, with its limits and gaps ([tools.md](tools.md)).
 
 ## Repo layout
 
 | Path | Contents |
 |---|---|
-| `signals.md` → `kpis.md` → `analysis.md` → `dashboards.md` → `alerts.md` → `events.md` | The guide's chapters, in reading order; each opens with `## Rules` |
+| `signals.md` → `kpis.md` → `analysis.md` → `dashboards.md` → `alerts.md` → `events.md` → `tools.md` | The guide's chapters, in reading order; each opens with `## Rules` |
 | `flows.md` | The advanced chapter: journey metrics worked out in depth, with the plots |
-| `reference/datadog/` | Datadog-specific notes (Java service, AWS); an archive |
+| `reference/<tool>/` | Filled tool maps, each dated: Datadog (with the APM case study), Cloudflare Workers, Amplitude, Kubernetes with Prometheus, Google Cloud, AWS CloudWatch |
 | `templates/` | Fill-in templates |
 | `src/` | Plot scripts (`*_plots.py`, `common.py`, `plots.py`), `calc.py`, `check.py` |
 | `images/` | Generated plots; don't edit by hand |
@@ -71,5 +72,5 @@ uv run src/check.py                             # check docs: links, anchors, qu
 - **Headings are anchors.** Other docs and this router link to them. Renaming a heading means updating every link to it; `check.py` finds broken ones.
 - **Numbers come from code.** Every formula result in the docs should be reproducible with `calc.py` or a plot script. Captions quote what the scripts print.
 - **Plots are generated.** Change the script, run `uv run src/plots.py`, and commit the images. Plots are seeded; reruns must be byte-identical.
-- **Keep the references generic.** System-specific material goes under `reference/<tool>/`.
+- **Keep the references generic.** System-specific material goes under `reference/<tool>/`, on the headings in [tools.md](tools.md#write-the-page), with the date the vendor docs were checked.
 - **Before finishing**, run `uv run src/check.py` and fix anything it reports.

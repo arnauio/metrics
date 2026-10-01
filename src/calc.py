@@ -1,6 +1,7 @@
 """Calculator for the formulas in alerts.md and analysis.md. Standard library only.
 
   uv run src/calc.py burn --slo 99.9
+  uv run src/calc.py burn --slo 99.9 --ticket-hours 24   # tool can't look back 3 days
   uv run src/calc.py wilson 6 600
   uv run src/calc.py wilson 9 1200 --baseline 0.002   # vs a known normal rate
   uv run src/calc.py ztest 120 10000 150 10000
@@ -10,6 +11,7 @@
 """
 import argparse
 import math
+import sys
 
 TIERS = [("page", "1h + 5m", 14.4), ("page", "6h + 30m", 6.0), ("ticket", "3d + 6h", 1.0)]
 ZTEST_CAVEAT = "Covers sampling noise only. At high volume, compare the change with normal week-over-week variation too."
@@ -34,13 +36,21 @@ def min_samples(p: float, e: float, z: float = 1.96) -> int:
 
 
 def burn(args: argparse.Namespace) -> None:
+	if args.ticket_hours and not 12 <= args.ticket_hours < 72:
+		sys.exit("--ticket-hours must be from 12 to under 72: shorter overlaps the page pairs, 72 is the default")
 	budget = (100 - args.slo) / 100
 	print(f"SLO {args.slo}% over {args.period:g} days → error budget {budget:.4%} of requests")
-	print(f"{'severity':<8} {'windows':<10} {'burn':>6} {'error-rate threshold':>21} {'budget gone in':>15}")
-	for severity, windows, rate in TIERS:
+	print(f"{'severity':<8} {'windows':<10} {'burn':>6} {'error-rate threshold':>21} {'budget gone in':>15} {'min requests':>13}")
+	tiers = TIERS
+	if args.ticket_hours:  # same 10% of the budget over a shorter long window (alerts.md#slo-burn-rate-alerts)
+		long = args.ticket_hours
+		tiers = TIERS[:2] + [("ticket", f"{long:g}h + {long / 12:g}h", round(0.10 * args.period * 24 / long, 2))]
+	for severity, windows, rate in tiers:
 		hours = args.period * 24 / rate
 		gone = f"{hours:.0f} h" if hours < 72 else f"{hours / 24:.1f} days"
-		print(f"{severity:<8} {windows:<10} {rate:>5}× {rate * budget:>20.3%} {gone:>15}")
+		floor = math.ceil(round(5 / (rate * budget), 6))  # short window needs ~5 errors at the threshold (alerts.md#low-traffic)
+		print(f"{severity:<8} {windows:<10} {rate:>5}× {rate * budget:>20.3%} {gone:>15} {floor:>13,}")
+	print("min requests: volume floor for the short window, so the threshold means about 5 errors")
 	if args.observed is not None:
 		rate = args.observed / 100 / budget
 		print(f"observed {args.observed}% errors = {rate:.2f}× burn → budget gone in {args.period / rate:.1f} days")
@@ -106,6 +116,7 @@ def main() -> None:
 	p.add_argument("--slo", type=float, required=True, help="SLO target in percent, e.g. 99.9")
 	p.add_argument("--period", type=float, default=30, help="SLO period in days (default 30)")
 	p.add_argument("--observed", type=float, help="observed error rate in percent, to get its burn rate")
+	p.add_argument("--ticket-hours", type=float, help="long window of the ticket pair in hours, if the tool can't look back 3 days")
 	p.set_defaults(func=burn)
 
 	p = sub.add_parser("wilson", help="interval for x events in n; with --baseline, compare with a known rate")

@@ -110,6 +110,7 @@ journeys:
     alert: control limits from observed σ of healthy windows (flows.md#journey-alerts)
 
 # Data sources: where each signal comes from (dashboards.md#map-to-your-stack).
+# Map each tool with templates/tool-map.yaml (tools.md).
 data_sources:
   client_rum: unknown                # e.g. Sentry, Vercel Speed Insights
   edge: unknown                      # e.g. Cloudflare analytics / Logpush

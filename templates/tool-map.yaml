@@ -1,0 +1,50 @@
+# Tool map: one per tool, filled from the vendor's own docs. Method: tools.md.
+# Values show the shape; replace every one. Mark what the docs don't state as `not verified`,
+# and link the vendor page for each answer.
+
+tool: example-tool
+covers: [server_events]            # rows of kpi-map.yaml data_sources
+docs_checked: 2026-01-01
+docs_index: unknown                # docs root or llms.txt
+plan: unknown                      # tier the features below need
+
+building_blocks:                   # tools.md#1-inventory-the-building-blocks
+  events: unknown                  # incl. spans and trace context
+  metric_types: unknown            # summed across a tag? percentiles merge across instances?
+  derived_metrics: unknown         # counted from logs or spans; before sampling?
+  queries: unknown
+  panels: unknown
+  alerts: unknown                  # threshold, AND of conditions, anomaly, composite
+  change_markers: unknown
+
+limits:                            # tools.md#2-extract-the-limits
+  sampling: unknown
+  retention: unknown
+  delay: unknown
+  alert_windows: unknown           # longest look-back
+  cardinality: unknown
+  pricing: unknown                 # what the bill grows with
+
+instrumentation: unknown           # what you must emit yourself, where, with which fields
+
+translation:                       # tools.md#3-translate-each-concept
+  key_action_sli: unknown
+  red_per_call: unknown
+  percentiles: unknown
+  burn_rate_pair: unknown
+  low_traffic: unknown
+  zero_traffic: unknown
+  baseline_last_week: unknown
+  explore_any_field: unknown
+
+gaps:                              # tools.md#4-flag-gaps-and-fallbacks
+  - missing: unknown
+    fallback: unknown
+    loses: unknown
+
+worked_example:                    # tools.md#5-check-it-with-one-key-action
+  key_action: unknown              # an id from kpi-map.yaml
+  sli_query: unknown
+  panel: unknown
+  page_alert: unknown              # thresholds from `uv run src/calc.py burn --slo <target>`
+  stuck_on: []
