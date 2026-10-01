@@ -26,7 +26,7 @@ One question runs through the guide: **is the product working for users right no
 | 3 | [analysis.md](analysis.md) | How to read the numbers honestly: noise vs real variation, intervals, baselines, and whether a change moved a KPI |
 | 4 | [dashboards.md](dashboards.md) | What to show: the dashboard set, panels, tagging, data sources |
 | 5 | [alerts.md](alerts.md) | What to page on: SLO burn rates, thresholds by metric type, low traffic |
-| 6 | [incidents.md](incidents.md) | What to do when it breaks: top-down triage, mitigation, runbooks, post-incident reviews |
+| 6 | [incidents.md](incidents.md) | When it breaks: triage, runbooks and reviews, at a high level |
 | 7 | [events.md](events.md) | Where the data comes from: one wide event per unit of work, metrics as projections of it, sampling, trade-offs |
 | 8 | [tools.md](tools.md) | How to apply it to your tools: inventory, limits, translation, gaps; tool pages under `reference/` |
 | 9 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |

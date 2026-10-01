@@ -16,16 +16,15 @@ Tool-agnostic guides for observability work: choosing KPIs, designing dashboards
 | Alert at low traffic | [alerts.md: Low traffic](alerts.md#low-traffic) | Check false alarms with `calc.py poisson` | Requests per window at the quietest hours; baseline error rate |
 | Is this rate different from normal? | [analysis.md: Formulas](analysis.md#formulas), [Sampling noise vs real variation](analysis.md#sampling-noise-vs-real-variation), [kpis.md: What counts as an error](kpis.md#what-counts-as-an-error) | Known normal rate: `calc.py wilson <x> <n> --baseline <rate>`. Two measured periods: `calc.py ztest`. Then compare with normal variation | Which statuses were counted; the baseline's own sample size and how much it varies between comparable windows |
 | Did an API regression or deploy move a KPI? | [analysis.md: Attribution recipe](analysis.md#did-it-move-the-kpi-an-attribution-recipe), [kpis.md: Estimate the effect](kpis.md#2-estimate-the-effect-on-the-key-action) | Place the call in the tree, baseline like with like, control segment, confounders, size with an interval | Deploy and flag timeline; an unaffected segment (region, client version) |
-| Incident triage | [incidents.md: Triage, top down](incidents.md#triage-top-down), [Running the incident](incidents.md#running-the-incident) | Scope → what changed → mitigate as soon as a step points to a fix → client/edge/origin → one instance vs all → dependencies → size the impact | Start time, affected key actions or segments, recent changes, mitigations already tried |
-| Write or review a runbook | [incidents.md: What a runbook contains](incidents.md#what-a-runbook-contains), [alerts.md: Alert anatomy](alerts.md#alert-anatomy) | One per paging alert, mitigations first | The alert's rule, the dashboards, the mitigations the team uses |
-| Post-incident review | [incidents.md: Post-incident review](incidents.md#post-incident-review), [kpis.md: Estimate the effect on the KPI](kpis.md#3-estimate-the-effect-on-the-kpi) | Fill in [templates/post-incident.md](templates/post-incident.md); size impact with `calc.py wilson <failed> <attempts> --baseline <rate>` (sampling noise only); follow-ups with one owner each | Incident log or chat export, alert history, attempts and failures during the incident, the baseline failure rate and its sample size |
+| Incident triage, runbooks | [incidents.md](incidents.md) | Scope → what changed → mitigate → locate → size; one runbook per paging alert | Start time, affected key actions or segments, recent changes |
+| Post-incident review | [incidents.md: Post-incident review](incidents.md#post-incident-review) | Fill in [templates/post-incident.md](templates/post-incident.md); size impact with `calc.py wilson --baseline` | Incident log, alert history, attempts and failures during the incident and a baseline |
 | Choose a window size for step ratios (journeys) | [flows.md Part 5](flows.md#part-5-window-sizing) | `calc.py spillover --gap <avg gap> --window <W>` | Average time between steps and for the whole journey |
 | Tags, cardinality, metric cost | [dashboards.md: Tagging and cardinality](dashboards.md#tagging-and-cardinality) | | Current tags and their value counts |
 | High-cardinality debugging, wide events, sampling | [events.md](events.md), [Trade-offs](events.md#trade-offs) | | |
 | Apply the guides to a specific tool (Datadog, Cloudflare, Amplitude, GCP, AWS, Prometheus, ...) | [tools.md](tools.md); the tool's page under `reference/` if there is one (Datadog: APM retention and pricing in [apm.md](reference/datadog/apm.md)) | Fill in [templates/tool-map.yaml](templates/tool-map.yaml) from the vendor's docs or `llms.txt`; never copy another tool's names or limits | Which tools cover which source; plan or tier, if limits depend on it |
 | Learn journey metrics in depth | [flows.md](flows.md) | The advanced chapter, with plots; not needed for the other chapters | |
 
-Terms (key action, SLI, SLO, error budget, burn rate, control limits, points, incident commander, mitigation, time to detect): [kpis.md: Glossary](kpis.md#glossary). Journey notation ($A_i$, $T_i$, $C$): [flows.md: From flows to metrics](flows.md#from-flows-to-metrics).
+Terms (key action, SLI, SLO, error budget, burn rate, control limits, points): [kpis.md: Glossary](kpis.md#glossary). Journey notation ($A_i$, $T_i$, $C$): [flows.md: From flows to metrics](flows.md#from-flows-to-metrics).
 
 Every guide opens with a `## Rules` section: its summary, with links into the body. When a task only needs the rules, read those first: [signals](signals.md#rules) · [kpis](kpis.md#rules) · [analysis](analysis.md#rules) · [dashboards](dashboards.md#rules) · [alerts](alerts.md#rules) · [incidents](incidents.md#rules) · [events](events.md#rules) · [tools](tools.md#rules) · [flows](flows.md#rules).
 
@@ -57,7 +56,7 @@ uv run src/check.py                             # check docs: links, anchors, qu
 
 - [templates/kpi-map.yaml](templates/kpi-map.yaml): the structure to fill in when choosing KPIs and mapping key actions to API calls (journeys optional). It's the input a dashboard or hub needs.
 - [templates/tool-map.yaml](templates/tool-map.yaml): one per tool, to translate the guide's building blocks into it, with its limits and gaps ([tools.md](tools.md)).
-- [templates/post-incident.md](templates/post-incident.md): one per incident: impact, timeline, detection, causes, follow-ups ([incidents.md](incidents.md#post-incident-review)).
+- [templates/post-incident.md](templates/post-incident.md): one per incident ([incidents.md](incidents.md#post-incident-review)).
 
 ## Repo layout
 

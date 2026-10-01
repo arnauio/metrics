@@ -194,9 +194,6 @@ Write down for every KPI:
 | Points | Percentage points: 80% → 75% is a 5-point drop. |
 | Critical path | The calls a key action can't complete without; the user waits for them. |
 | Wide events | One structured event per request with all its context ([events.md](events.md)). |
-| Incident commander | The one person coordinating an incident: keeps the picture, assigns the work, decides ([incidents.md](incidents.md#running-the-incident)). |
-| Mitigation | A step that stops the impact without needing the cause: rollback, flag off, drain ([incidents.md](incidents.md#triage-top-down)). |
-| Time to detect, time to mitigate | Incident start → detection; detection → mitigation ([incidents.md](incidents.md#post-incident-review)). |
 | Span | A wide event with trace IDs, so one request's events can be joined across services ([signals.md](signals.md#spans-and-trace-context)). |
 
 ## References
