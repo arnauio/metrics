@@ -79,5 +79,17 @@ uv run src/check.py                             # check docs: links, anchors, he
 - **Headings are anchors.** Other docs and this router link to them. Renaming a heading means updating every link to it; `check.py` finds broken ones. Start headings with a letter and use only letters, digits, spaces and `, : ' ? ( ) -`, so GitHub and GitBook give them the same anchor.
 - **Numbers come from code.** Every formula result in the docs should be reproducible with `calc.py` or a plot script. Captions quote what the scripts print.
 - **Plots are generated.** Change the script, run `uv run src/plots.py`, and commit the images. Plots are seeded; reruns must be byte-identical.
+
+  On the first run, uv installs numpy and matplotlib from `pyproject.toml` (Python 3.10+).
+
+  | Script | Plots for | Images |
+  |---|---|---|
+  | [src/flows_plots.py](src/flows_plots.py) | [flows.md](flows.md) | `images/plot*.png` |
+  | [src/kpis_plots.py](src/kpis_plots.py) | [kpis.md](kpis.md) | `images/kpis/` |
+  | [src/alerts_plots.py](src/alerts_plots.py) | [alerts.md](alerts.md) | `images/alerts/` |
+  | [src/analysis_plots.py](src/analysis_plots.py) | [analysis.md](analysis.md) | `images/analysis/` |
+
+  Shared helpers (paths, seeding, saving, the simulation) are in [src/common.py](src/common.py). [src/calc.py](src/calc.py) uses the standard library only.
+
 - **Keep the references generic.** System-specific material goes under `reference/<tool>/`, on the headings in [tools.md](tools.md#write-the-page), with the date the vendor docs were checked.
 - **Before finishing**, run `uv run src/check.py` and fix anything it reports.

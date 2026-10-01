@@ -113,46 +113,25 @@ Everything in that timeline ends up in the event above: one row, queryable on an
 
 ## Example 2: failed login (rate limited)
 
-| Offset | Duration | Step |
-|---|---|---|
-| 0ms | | Request arrives |
-| 1ms | 2ms | Rate limit check (by client IP): exceeded |
-| 4ms | | Response sent: 429 |
+A 4 ms request rejected by the rate limiter before the user lookup:
 
 ```json
 {
-  "timestamp": "2024-01-15T14:52:12.891Z",
-  "duration_ms": 4,
-  "main": true,
-  "trace_id": "a3ce929d0e0e47364bf92f3577b34da6",
-
-  "http.request.method": "POST",
   "http.route": "/api/login",
   "http.response.status_code": 429,
   "key_action": "log_in",
   "client.address": "203.0.113.42",
   "user_agent.original": "python-requests/2.31.0",
-
-  "service.name": "api-gateway",
-  "service.version": "v2.4.1",
-
   "ratelimit.key": "client.address",
-  "ratelimit.limit": 10,
-  "ratelimit.remaining": 0,
-  "ratelimit.reset_at": "2024-01-15T14:53:00Z",
-
   "error": true,
   "error.type": "rate_limit_exceeded",
-  "exception.message": "Rate limit exceeded for 203.0.113.42",
   "error.expected": true
 }
 ```
 
-What the event tells you:
-
-- **No `user.*` fields.** The request was rejected before we looked the user up. Absent fields are information too.
-- **A script, not a browser.** `user_agent.original` is `python-requests`. That could be a bot or a legitimate API client; group rate-limited requests by `client.address` to tell a single noisy client from a distributed attack.
-- **`error: true` but `error.expected: true`.** The request failed, but as designed. Decide explicitly how expected errors count ([kpis.md](kpis.md#what-counts-as-an-error)): usually they're excluded from availability SLOs (a 429 means the rate limiter works) but tracked on their own, because a surge in them is still worth knowing about.
+- **No `user.*` fields**: rejected before the lookup. Absent fields are information too.
+- **A script, not a browser**: group rate-limited requests by `client.address` to tell one noisy client from a distributed attack.
+- **`error.expected: true`**: failed as designed. Usually excluded from availability SLOs but tracked on its own ([kpis.md](kpis.md#what-counts-as-an-error)).
 
 ## Common queries
 

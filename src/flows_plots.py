@@ -7,18 +7,8 @@ import numpy as np
 from common import rng, save, simulate_window
 
 HEALTHY = [0.9, 0.9, 0.9, 1.0]  # C ≈ 0.729
-BROKEN = [0.9, 0.2, 0.9, 1.0]
-DEGRADED = [0.9, 0.8, 0.9, 1.0]
 OAUTH = [0.95, 0.85, 0.98, 0.99]
 OAUTH_T1_DROP = [0.80, 0.85, 0.98, 0.99]
-OAUTH_T2_DROP = [0.95, 0.70, 0.98, 0.99]
-OAUTH_T3_DROP = [0.95, 0.85, 0.85, 0.99]
-OAUTH_T4_DROP = [0.95, 0.85, 0.98, 0.90]
-
-
-def arrivals(transitions: list) -> np.ndarray:
-	"""Noise-free requests reaching each step when 1,000 enter step 1."""
-	return np.cumprod([1000.0, *transitions])
 
 
 def simulate(A1: int, transitions: list, windows: int, broken: list | None = None, jitter: float = 0.0, night_volume: int | None = None) -> tuple:
@@ -41,82 +31,14 @@ def individuals_sigma(baseline: np.ndarray) -> float:
 	return float(np.abs(np.diff(baseline)).mean() / 1.128)
 
 
-def label_bars(bars, fmt: str, offset: float = 0.0, **kwargs) -> None:
-	for bar in bars:
-		height = bar.get_height()
-		plt.text(bar.get_x() + bar.get_width() / 2., height + offset, format(height, fmt), ha="center", va="bottom", **kwargs)
-
-
-def plot_arrivals(transitions: list, color: str, title: str, filename: str) -> None:
-	"""Requests reaching each step of one flow."""
-	values = arrivals(transitions)
-	plt.figure(figsize=(10, 5))
-	bars = plt.bar([f"Step {i + 1}" for i in range(len(values))], values, color=color, alpha=0.8, edgecolor="black", linewidth=0.5)
-	label_bars(bars, ".0f", fontsize=9)
-	plt.title(title, fontsize=12, fontweight="bold")
-	plt.ylabel("Number of requests", fontsize=11)
-	plt.xlabel("Flow step", fontsize=11)
-	plt.grid(axis="y", alpha=0.3)
-	save(filename)
-
-
-def plot3_arrivals_comparison() -> None:
-	"""Requests reaching each step, healthy and broken flows side by side."""
-	x = np.arange(5)
-	width = 0.35
-	plt.figure(figsize=(10, 5))
-	plt.bar(x - width / 2, arrivals(HEALTHY), width=width, label="Healthy (T2=0.9)", color="#2ca02c", alpha=0.8, edgecolor="black", linewidth=0.5)
-	plt.bar(x + width / 2, arrivals(BROKEN), width=width, label="Broken (T2=0.2)", color="#d62728", alpha=0.8, edgecolor="black", linewidth=0.5)
-	plt.xticks(x, [f"Step {i + 1}" for i in x], fontsize=10)
-	plt.title("Side-by-Side: Healthy vs. Broken Flow", fontsize=12, fontweight="bold")
-	plt.ylabel("Number of requests", fontsize=11)
-	plt.xlabel("Flow step", fontsize=11)
-	plt.legend(fontsize=10)
-	plt.grid(axis="y", alpha=0.3)
-	save("plot3.png")
-
-
-def plot4_transition_ratios() -> None:
-	"""Transition ratios T_i of the healthy and broken flows."""
-	x = np.arange(4)
-	width = 0.35
-	plt.figure(figsize=(8, 5))
-	healthy = plt.bar(x - width / 2, HEALTHY, width=width, label="Healthy (T2=0.9)", color="#2ca02c", alpha=0.8, edgecolor="black", linewidth=0.5)
-	broken = plt.bar(x + width / 2, BROKEN, width=width, label="Broken (T2=0.2)", color="#d62728", alpha=0.8, edgecolor="black", linewidth=0.5)
-	label_bars(healthy, ".1f", offset=0.02, fontsize=8)
-	label_bars(broken, ".1f", offset=0.02, fontsize=8)
-	plt.xticks(x, [f"T{i + 1}" for i in x], fontsize=10)
-	plt.title("Per-Step Transition Ratios: Where Did It Break?", fontsize=12, fontweight="bold")
-	plt.ylabel("Transition ratio (0-1)", fontsize=11)
-	plt.xlabel("Transition step", fontsize=11)
-	plt.ylim(0, 1.1)
-	plt.legend(fontsize=10)
-	plt.grid(axis="y", alpha=0.3)
-	save("plot4.png")
-
-
-def plot5_conversion() -> None:
-	"""End-to-end conversion C of the healthy and broken flows."""
-	plt.figure(figsize=(7, 5))
-	bars = plt.bar(["Healthy Flow", "Broken Flow"], [math.prod(HEALTHY), math.prod(BROKEN)], color=["#2ca02c", "#d62728"], alpha=0.8, edgecolor="black", linewidth=1)
-	label_bars(bars, ".1%", offset=0.02, fontsize=11, fontweight="bold")
-	plt.axhline(y=0.70, color="black", linestyle="--", linewidth=1, alpha=0.5, label="Example SLO (70%)")
-	plt.title("End-to-End Conversion: Your Flow SLI", fontsize=12, fontweight="bold")
-	plt.ylabel("Conversion ratio C(t)", fontsize=11)
-	plt.ylim(0, 1)
-	plt.legend(fontsize=9)
-	plt.grid(axis="y", alpha=0.3)
-	save("plot5.png")
-
-
 def shade_degradation(baseline: int, n: int) -> None:
 	if baseline < n:
 		plt.axvspan(baseline + 0.5, n + 0.5, color="#ffcccc", alpha=0.3, label="Degradation injected")
 
 
-def finish_C_plot(title: str, xlabel: str = "Time window") -> None:
+def finish_C_plot(title: str) -> None:
 	plt.title(title, fontsize=12, fontweight="bold")
-	plt.xlabel(xlabel, fontsize=11)
+	plt.xlabel("Time window", fontsize=11)
 	plt.ylabel("Conversion ratio C(t)", fontsize=11)
 	plt.ylim(0, 1)
 	plt.grid(axis="y", alpha=0.3)
@@ -180,26 +102,6 @@ def plot_seasonal_volume_and_C(volumes: np.ndarray, C: np.ndarray, filename: str
 	lines1, labels1 = ax1.get_legend_handles_labels()
 	lines2, labels2 = ax2.get_legend_handles_labels()
 	ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper left", fontsize=9)
-	save(filename)
-
-
-def plot_seasonal_C_with_limits(volumes: np.ndarray, C: np.ndarray, baseline: int, filename: str, title: str) -> None:
-	"""C(t) under a daily traffic cycle, with volume-aware limits from the first `baseline` windows."""
-	# p-chart σ = sqrt(p(1 − p)/n), plus the real variation: the baseline's
-	# variance minus its average sampling variance. Limits widen at low volume
-	# but never get narrower than the real variation.
-	n, c = volumes[:baseline], C[:baseline]
-	p = float((n * c).sum() / n.sum())
-	extra_var = max(0.0, float(c.var(ddof=1) - (p * (1 - p) / n).mean()))
-	sigma = np.sqrt(p * (1 - p) / volumes + extra_var)
-	windows = np.arange(1, len(C) + 1)
-	plt.figure(figsize=(10, 5))
-	shade_degradation(baseline, len(C))
-	plt.plot(windows, C, marker="o", markersize=4, color="#1f77b4", label="C(t)", linewidth=1.5, alpha=0.8)
-	plt.hlines(p, 1, len(C), colors="#1f77b4", linestyles="dashed", label=f"Baseline mean = {p:.3f}", linewidth=2)
-	plt.plot(windows, np.minimum(1.0, p + 3 * sigma), color="#666666", linestyle="dotted", label="Volume-aware limits (±3σ)", linewidth=1.5)
-	plt.plot(windows, np.maximum(0.0, p - 3 * sigma), color="#666666", linestyle="dotted", linewidth=1.5)
-	finish_C_plot(title, xlabel="Time window (one daily cycle)")
 	save(filename)
 
 
@@ -269,51 +171,26 @@ def plot13_window_size_spike() -> None:
 
 
 def main() -> None:
-	# Part 1: deterministic example flows
-	plot_arrivals(HEALTHY, "#2ca02c", "Healthy Flow: Per-Step Request Arrivals", "plot1.png")
-	plot_arrivals(BROKEN, "#d62728", "Broken Flow: Step 2 Failure (T2=0.2)", "plot2.png")
-	plot3_arrivals_comparison()
-	plot4_transition_ratios()
-	plot5_conversion()
-
-	# Part 2: volume
+	# Volume: sampling noise
 	_, C = simulate(100, HEALTHY, 40)
 	plot_C_with_limits(C, 40, "plot6.png", "C(t) with control limits - 100 requests/window")
-	_, C = simulate(10_000, HEALTHY, 40)
-	plot_C_with_limits(C, 40, "plot7.png", "C(t) with control limits - 10k requests/window")
 	_, C = simulate(1_000_000, HEALTHY, 40)
 	plot_C_with_limits(C, 40, "plot14.png", "C(t) with control limits - 1M requests/window")
 
-	# Part 3: jitter (each T_i varies ±0.05 per window)
-	plot8_timing_noise()
-	_, C = simulate(100, HEALTHY, 40, jitter=0.05)
-	plot_C_with_limits(C, 40, "plot9.png", "C(t) with control limits - 100 requests/window, jitter ±0.05")
+	# Jitter: each T_i varies ±0.05 per window
 	_, C = simulate(1_000_000, HEALTHY, 40, jitter=0.05)
 	plot_C_with_limits(C, 40, "plot10.png", "C(t) with control limits - 1M requests/window, jitter ±0.05")
 	plot_C_with_moving_average_limits(C, 40, 5, "plot15.png", "Moving average of C(t) - 1M requests/window, jitter ±0.05")
-
-	# Part 4: failures
-	_, C = simulate(100, HEALTHY, 40, DEGRADED)
-	plot_C_with_limits(C, 40, "plot11.png", "C(t) with control limits - T2 degrades 0.9 → 0.8, 100 requests/window")
-	_, C = simulate(1_000_000, HEALTHY, 40, DEGRADED)
-	plot_C_with_limits(C, 40, "plot12.png", "C(t) with control limits - T2 degrades 0.9 → 0.8, 1M requests/window")
-
-	# Part 5: window sizing
-	plot13_window_size_spike()
 
 	# OAuth2 device flow
 	volumes, C = simulate(10_000, OAUTH, 40, jitter=0.02, night_volume=500)
 	plot_seasonal_volume_and_C(volumes, C, "plot15_5.png", "OAuth2: Volume changes 20×, C(t) stays stable")
 	_, C = simulate(10_000, OAUTH, 20, OAUTH_T1_DROP, jitter=0.02)
 	plot_C_with_moving_average_limits(C, 20, 5, "plot16.png", "OAuth2: User behavior change (T1: 0.95 → 0.80)")
-	volumes, C = simulate(10_000, OAUTH, 20, OAUTH_T2_DROP, jitter=0.02, night_volume=500)
-	plot_seasonal_C_with_limits(volumes, C, 20, "plot17.png", "OAuth2: System failure with seasonal traffic (T2: 0.85 → 0.70)")
-	volumes, C = simulate(10_000, OAUTH, 40, jitter=0.02, night_volume=500)
-	plot_seasonal_C_with_limits(volumes, C, 40, "plot18.png", "OAuth2: Seasonal volume pattern, healthy flow")
-	_, C = simulate(10_000, OAUTH, 20, OAUTH_T3_DROP, jitter=0.02)
-	plot_C_with_moving_average_limits(C, 20, 5, "plot19.png", "OAuth2: Polling infrastructure failure (T3: 0.98 → 0.85)")
-	_, C = simulate(10_000, OAUTH, 20, OAUTH_T4_DROP, jitter=0.02)
-	plot_C_with_moving_average_limits(C, 20, 5, "plot20.png", "OAuth2: Token validation issues (T4: 0.99 → 0.90)")
+
+	# Part 5: window sizing
+	plot8_timing_noise()
+	plot13_window_size_spike()
 
 
 if __name__ == "__main__":

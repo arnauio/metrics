@@ -39,7 +39,7 @@ One question runs through the guide: **is the product working for users right no
 
 | # | Chapter | Answers |
 |---|---|---|
-| 1 | [signals.md](signals.md) | What the data is: logs, spans and metrics as events, metric types, RED/USE, OpenTelemetry, a short history |
+| 1 | [signals.md](signals.md) | What the data is: logs, spans and metrics as events, metric types, RED/USE, OpenTelemetry |
 | 2 | [kpis.md](kpis.md) | What to measure: the KPI tree from business outcomes down to the key actions users take, their API calls and the resources behind them, and how an API call affects a KPI |
 | 3 | [analysis.md](analysis.md) | How to read the numbers honestly: noise vs real variation, intervals, baselines, and whether a change moved a KPI |
 | 4 | [dashboards.md](dashboards.md) | What to show: the dashboard set, panels, tagging, data sources |
@@ -50,27 +50,10 @@ One question runs through the guide: **is the product working for users right no
 | 9 | [ai-agents.md](ai-agents.md) | How an AI agent applies the guides: access, what it may do, what it needs, how it reports |
 | 10 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |
 
-- **flows.md** builds on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google): request counters per step, window sizing, 22 plots and an OAuth2 case study.
+- **flows.md** builds on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google): request counters per step, window sizing, simulations and an OAuth2 example.
 - **Tool-specific**: dated examples of [tools.md](tools.md) under `reference/`: [Datadog](reference/datadog/datadog.md) (plus [APM enrichment](reference/datadog/apm.md) for a Java service), [Cloudflare Workers](reference/cloudflare/cloudflare.md), [Amplitude](reference/amplitude/amplitude.md), [Kubernetes with Prometheus](reference/kubernetes/kubernetes.md), [Google Cloud](reference/gcp/gcp.md) and [AWS CloudWatch](reference/aws/cloudwatch.md).
 - **Templates**: [templates/kpi-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/kpi-map.yaml): KPIs, key actions, API calls and data sources (multi-step journeys are advanced, see [flows.md](flows.md)), to fill in for a real system. [templates/tool-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/tool-map.yaml): one per tool, its building blocks, limits and gaps. [templates/post-incident.md](https://github.com/arnauio/metrics/blob/main/templates/post-incident.md): one per incident, its impact, timeline, causes and follow-ups.
 
-## Plots and calculator
+## Calculator
 
-Requires [uv](https://docs.astral.sh/uv/). From the repo root:
-
-```sh
-uv run src/plots.py          # regenerate every plot
-uv run src/calc.py --help    # burn-rate thresholds, Wilson intervals, z-tests, sample sizes, Poisson tails, spillover
-uv run src/check.py          # check links, anchors and the numbers the docs quote
-```
-
-On the first run, uv creates `.venv` and installs the dependencies from `pyproject.toml` (numpy, matplotlib; Python 3.10+). Plots are seeded, so reruns produce identical images.
-
-| Script | Plots for | Images |
-|---|---|---|
-| [src/flows_plots.py](https://github.com/arnauio/metrics/blob/main/src/flows_plots.py) | [flows.md](flows.md) | `images/plot*.png` |
-| [src/kpis_plots.py](https://github.com/arnauio/metrics/blob/main/src/kpis_plots.py) | [kpis.md](kpis.md) | `images/kpis/` |
-| [src/alerts_plots.py](https://github.com/arnauio/metrics/blob/main/src/alerts_plots.py) | [alerts.md](alerts.md) | `images/alerts/` |
-| [src/analysis_plots.py](https://github.com/arnauio/metrics/blob/main/src/analysis_plots.py) | [analysis.md](analysis.md) | `images/analysis/` |
-
-Shared helpers (paths, seeding, saving, the simulation) are in [src/common.py](https://github.com/arnauio/metrics/blob/main/src/common.py). [src/calc.py](https://github.com/arnauio/metrics/blob/main/src/calc.py) uses the standard library only.
+Requires [uv](https://docs.astral.sh/uv/). From the repo root, `uv run src/calc.py --help`: burn-rate thresholds, Wilson intervals, z-tests, sample sizes, Poisson tails, spillover. Maintaining the repo (plots, checks): [AGENTS.md](https://github.com/arnauio/metrics/blob/main/AGENTS.md#editing-this-repo).

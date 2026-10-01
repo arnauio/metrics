@@ -17,7 +17,7 @@ A metric moved: is it real, what caused it, did it affect a KPI? Builds on the [
 ## Sampling noise vs real variation
 
 - **Sampling noise shrinks with volume**: $$SE = \sqrt{p(1-p)/n}$$ falls as $$1/\sqrt{n}$$, so 100× the traffic → 10× less noise.
-- **Real variation doesn't shrink**: performance fluctuates, traffic mix shifts, users behave differently by hour. Past some volume it dominates (more plots in the advanced [flows.md Part 3](flows.md#part-3-real-world-variability-jitter)).
+- **Real variation doesn't shrink**: performance fluctuates, traffic mix shifts, users behave differently by hour. Past some volume it dominates (more plots in the advanced [flows.md Part 3](flows.md#jitter-real-variation)).
 
 <figure><img src="images/analysis/noise_vs_variation.png" alt="σ of a success rate vs requests per window: sampling noise only vs with real variation"><figcaption><p>Sampling noise shrinks with volume; real variation doesn't.</p></figcaption></figure>
 

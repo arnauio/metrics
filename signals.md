@@ -25,7 +25,6 @@ An event is a set of named fields and values, like a JSON document. The usual si
 
 - **Keep events where any field is queryable**: columnar stores handle high-cardinality fields. Metrics go to a time-series store, where cost grows with the series count ([dashboards.md](dashboards.md#tagging-and-cardinality)).
 - **Metrics are a projection.** Counted from every event at write time, before any sampling, they cover all traffic at little cost. That's what alerts, SLOs, long retention and infrastructure need ([events.md](events.md#trade-offs)).
-- **Observability 2.0** (Majors) goes further: one source of truth, wide events, and aggregation at read time. This guide keeps write-time counters for alerts, because they count all traffic.
 
 ## Structured logs vs wide events
 
@@ -78,27 +77,6 @@ An event is a set of named fields and values, like a JSON document. The usual si
 
 - **Golden signals = RED + saturation.** In this guide saturation sits with USE, on the resources behind the calls ([kpis.md](kpis.md#level-3-resources)).
 - **RED is a projection of request events**: one duration histogram per call, whose count gives the rate and, by status, the errors ([kpis.md](kpis.md#measure-where-the-user-is)).
-
-## A short history
-
-| Year | What | Source |
-|---|---|---|
-| 2010 | Google publishes Dapper, its production tracing system, built on sampling | Sigelman et al. |
-| 2012 | USE method | Gregg |
-| 2015 | RED method (written up in 2018) | Wilkie |
-| 2016 | Canonical log lines at Stripe: one log line per request | Brandur |
-| 2017 | Metrics, tracing and logging as overlapping kinds of data with different costs | Bourgon |
-| 2017 | The four golden signals | Google SRE book |
-| 2019 | OpenTracing and OpenCensus merge into OpenTelemetry | Google Open Source blog |
-| 2024 | Wide events replace metrics, logs and traces | Burmistrov |
-| 2024 | No pillars: spans are wide events | Tane |
-| 2024 | Observability 2.0: one source of truth | Majors |
-
-{% hint style="info" %}
-
-Wide events aren't new: Brandur wrote about canonical log lines in 2016, years before the 2.0 name.
-
-{% endhint %}
 
 ## References
 

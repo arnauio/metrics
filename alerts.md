@@ -174,20 +174,6 @@ Use this where the expected count is far below the threshold:
 
 {% endhint %}
 
-## Root-cause (composite) alerts
-
-When a symptom has several known causes, a composite alert can name which:
-
-| Condition | Message |
-|---|---|
-| latency high **and** CPU > 70% | "CPU saturation: scale out" |
-| latency high **and** DB p95 > 100 ms **and** CPU ≤ 70% | "slow queries" |
-| latency high **and** third-party p95 > 1 s **and** CPU ≤ 70% **and** DB p95 ≤ 100 ms | "vendor" |
-
-- The thresholds are examples; take yours from load tests and baselines.
-- Make conditions complementary (`> 70` vs `≤ 70`) → no gaps.
-- Keep the plain symptom alert too: it fires when no known cause matches.
-
 ## Alert anatomy
 
 ```text

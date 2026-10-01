@@ -12,8 +12,8 @@ Builds on the [KPI tree](kpis.md#the-kpi-tree), [noise and baselines](analysis.m
 4. **Count each step once per attempt, and only successes at the final step**, because repeats can push success above 100%, and a failed final request would count as a completed journey ([What we count](#what-we-count-requests)).
 5. **Make the window 5–10× the average step gap for each step transition $$T_i(t)$$, and the whole journey for the journey success rate $$C(t)$$**, because a smaller window makes the ratios noisy and misleading when traffic changes ([Part 5](#part-5-window-sizing)).
 6. **Alert on $$C(t)$$, debug with $$T_i(t)$$**, because any broken step lowers $$C(t)$$, and the $$T_i(t)$$ that dropped points at it ([From flows to metrics](#from-flows-to-metrics)).
-7. **Page on $$C(t)$$ with control limits from its observed σ, not burn rates**, because abandonment makes a journey's error budget too large for burn rates, and volume alone understates its variation ([Journey alerts](#journey-alerts), [Part 3](#part-3-real-world-variability-jitter)).
-8. **Fixed, not rolling, limits**: set them from a known-good period and update them deliberately, because rolling limits absorb a failure and the alert clears itself ([Journey alerts](#journey-alerts), [Scenario 2](#scenario-2-system-failure-with-seasonal-traffic-t2-drops)).
+7. **Page on $$C(t)$$ with control limits from its observed σ, not burn rates**, because abandonment makes a journey's error budget too large for burn rates, and volume alone understates its variation ([Journey alerts](#journey-alerts), [Jitter](#jitter-real-variation)).
+8. **Fixed, not rolling, limits**: set them from a known-good period and update them deliberately, because rolling limits absorb a failure and the alert clears itself ([Journey alerts](#journey-alerts)).
 9. **Set the SLO from the observed baseline, not a round number**, because three steps at 90% already give 73% ([What these metrics tell you](#what-these-metrics-tell-you)).
 10. **Use event-based tracking or product-analytics funnels for long async steps, very low traffic, or per-user questions**, because windows would have to be huge and counters have no user IDs ([When this approach fits](#when-this-approach-fits)).
 
@@ -25,7 +25,7 @@ Per-endpoint SLIs can all be green while the journey is broken.
 
 {% endhint %}
 
-In the [OAuth2 example](#real-world-example-oauth2-device-authorization-grant), when fewer verification page loads end in an authorization (85% → 70%), every endpoint still returns HTTP 200, but journey success drops from 78% to 65%. Broken verification URLs, confusing UX, or timing problems show up only in the flow.
+In the [OAuth2 example](#oauth2-device-flow), when fewer verification page loads end in an authorization (85% → 70%), every endpoint still returns HTTP 200, but journey success drops from 78% to 65%. Broken verification URLs, confusing UX, or timing problems show up only in the flow.
 
 Funnel tools suit product analytics. For SLOs and alerts we found them harder: they need user tracking and custom events, and can get expensive.
 
@@ -118,11 +118,11 @@ The journey is connected; the counters are not. A request at `/otp` is never lin
 
 Decide up front which requests count at each step, and keep it consistent:
 - **Every request** to the step's endpoint: the step's own errors become part of the next transition ratio.
-- **Only successful (2xx) requests**: each ratio is "successful arrivals here per successful arrival at the previous step". The [OAuth2 example](#real-world-example-oauth2-device-authorization-grant) does this.
+- **Only successful (2xx) requests**: each ratio is "successful arrivals here per successful arrival at the previous step". The [OAuth2 example](#oauth2-device-flow) does this.
 
 Either way, the final step counts only successes, or a failed `/auth` request would count as a completed journey.
 
-**Count each step once per attempt.** Autosave sends many `PUT`s per document open; clients poll and retry. Counted per request, these inflate the step's count and can push journey success above 100%. Count a once-per-attempt signal instead: the first successful save per edit session, or a "saved" event. The [OAuth2 example](#real-world-example-oauth2-device-authorization-grant) leaves pending polls out of its token step for the same reason.
+**Count each step once per attempt.** Autosave sends many `PUT`s per document open; clients poll and retry. Counted per request, these inflate the step's count and can push journey success above 100%. Count a once-per-attempt signal instead: the first successful save per edit session, or a "saved" event. The [OAuth2 example](#oauth2-device-flow) leaves pending polls out of its token step for the same reason.
 
 ## Time and windows
 
@@ -147,7 +147,7 @@ flowchart LR
 
 On average the split doesn't bias the ratios: in steady traffic, journeys leaving a window are replaced by journeys arriving from the previous one. But the ratios get **noisier**, and they **mislead when traffic changes**. When sign-ins ramp up, the OTP step still sees the traffic of a few seconds ago, so the ratio reads low; when traffic falls, it reads high, sometimes above 100%. The window should be much bigger than the time between steps ([Part 5](#part-5-window-sizing)).
 
-Volume matters too: the same window bounces at 100 requests and is smooth at 10,000, because sampling noise shrinks as volume grows ([Part 2](#part-2-volume-matters-sampling-noise-vs-signal)). Real variation doesn't ([Part 3](#part-3-real-world-variability-jitter)).
+Volume matters too: the same window bounces at 100 requests and is smooth at 10,000, because sampling noise shrinks as volume grows ([Volume](#volume-sampling-noise)). Real variation doesn't ([Jitter](#jitter-real-variation)).
 
 ### User behavior: abandonment and retry
 
@@ -233,121 +233,57 @@ Set it from the observed baseline: three steps at 90% each already give 73%, so 
 
 Dashboards and alerts on these metrics: [Operating journey metrics](#operating-journey-metrics).
 
-## Visualizations
+## Simulations
 
-Basic concepts first, then how volume, jitter and failures affect the signal.
+The plots below show what the text can't: how volume, real variation and a failure look on a control chart.
+- [src/flows_plots.py](https://github.com/arnauio/metrics/blob/main/src/flows_plots.py) generates them, seeded; [src/kpis_plots.py](https://github.com/arnauio/metrics/blob/main/src/kpis_plots.py) generates the errors-multiply plot above ([how to regenerate them](https://github.com/arnauio/metrics/blob/main/AGENTS.md#editing-this-repo)).
+- The first three use a generic flow, not the login flow: four steps then success ($$S = 5$$), with $$T_1 = T_2 = T_3 = 0.9$$ and $$T_4 = 1.0$$, so $$C = 0.9^3 \approx 73\%$$.
+- Each is an **individuals chart**: one $$C(t)$$ per window against fixed limits, mean ± 3σ of the healthy windows, with σ from their average moving range.
 
-Parts 1–4 use a generic flow, not the login flow above: four steps followed by a success step, so $$S = 5$$.
+### Volume: sampling noise
 
-```mermaid
-flowchart LR
-    S1[Step 1] --> S2[Step 2] --> S3[Step 3] --> S4[Step 4] --> SS[Success]
-```
+<figure><img src="images/plot6.png" alt="C(t) with control limits, 100 requests per window"><figcaption><p>100 requests per window: C(t) bounces (σ ≈ 0.04), so the limits are wide, about ±0.13.</p></figcaption></figure>
 
-$$C(t) = A_5(t)/A_1(t) = T_1(t)\cdot T_2(t)\cdot T_3(t)\cdot T_4(t)$$, with 90% success on the first three transitions ($$T_1 = T_2 = T_3 = 0.9$$) and $$T_4 = 1.0$$, giving $$0.9^3 \approx 73\%$$ journey success.
+<figure><img src="images/plot14.png" alt="C(t) with control limits, 1M requests per window"><figcaption><p>1M requests per window: nearly flat, with limits about ±0.001.</p></figcaption></figure>
 
-[src/flows_plots.py](https://github.com/arnauio/metrics/blob/main/src/flows_plots.py) generates the plots in Parts 1–5 and the OAuth2 scenarios; [src/kpis_plots.py](https://github.com/arnauio/metrics/blob/main/src/kpis_plots.py) generates the errors-multiply plot above ([how to regenerate them](README.md#plots-and-calculator)).
+- Sampling noise shrinks with $$1/\sqrt{n}$$: 100× the traffic gives 10× tighter limits.
+- This assumes each request succeeds or fails independently. Real systems also vary from window to window.
 
-## Part 1: Basic concepts, what are we measuring?
+### Jitter: real variation
 
-The building blocks: arrivals, transitions and journey success.
+**Jitter** models real variation (performance, time of day, load): in each window, each $$T_i$$ is drawn uniformly from $$T_i ± 0.05$$. $$T_4 = 1.0$$ can't go higher, so it stays fixed.
 
-### Arrivals per step, healthy flow
+<figure><img src="images/plot10.png" alt="C(t) with control limits, 1M requests per window, jitter 0.05"><figcaption><p>Same flow at 1M requests per window, with jitter: the mean is still about 73%, but the limits are about ±0.12, not ±0.001.</p></figcaption></figure>
 
-<figure><img src="images/plot1.png" alt="Arrivals per step – normal"><figcaption><p>1,000 requests start at Step 1. With 90% success per step, the counts fall off gradually: Step 1 → 1,000, Step 2 → 900, Step 3 → 810, Step 4 → 729, Step 5 (success) → 729.</p></figcaption></figure>
+- Volume removes sampling noise, not real variation: a system that fluctuates by a few points per window does so at any scale.
+- Limits from volume alone (binomial σ) would be about ±0.001 here and fire on almost every healthy window. Measure σ from healthy windows instead ([analysis.md](analysis.md#sampling-noise-vs-real-variation)).
+- To detect smaller drops: bigger windows (15–30 min, slower detection), a moving average (adds lag), sustained-breach rules, or fixing the source of the variation.
 
-### Arrivals per step, broken step
+<figure><img src="images/plot15.png" alt="Moving average of C(t) with its control limits"><figcaption><p>Same data: a 5-window moving average (blue) vs the raw values (gray). The limits are about ±0.055 instead of ±0.12.</p></figcaption></figure>
 
-<figure><img src="images/plot2.png" alt="Arrivals per step – T2 drops to 0.2"><figcaption><p>Arrivals per step when T2 drops to 0.2.</p></figcaption></figure>
+- The average of $$w$$ windows varies $$\sqrt{w}$$ times less, so its limits are $$\sqrt{5} \approx 2.2\times$$ tighter, and a smaller sustained drop crosses them.
+- Compute σ from the **raw** values and divide by $$\sqrt{w}$$. Neighbouring averages share 4 of their 5 inputs, so σ from the average's own moving ranges is far too small, and the limits fire on healthy traffic.
+- The cost is lag: about 2 windows on average for a sudden drop, and the full drop shows only after 5 windows (50 minutes with 10-minute windows).
 
-Same starting volume, but $$T_2$$ (Step 2 → Step 3) drops to 20%. Step 3 onward sees far fewer requests: the cliff sits between Step 2 and Step 3 and carries through the rest of the flow.
+### OAuth2 device flow
 
-### Side-by-side comparison
+The OAuth2 device flow ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628)), used by smart TVs, CLI tools and IoT devices, in 10-minute windows ([why 10](#how-to-choose-window-size)), counting only successful requests:
 
-<figure><img src="images/plot3.png" alt="Arrivals per step – normal vs bad"><figcaption><p>Arrivals per step, healthy vs broken.</p></figcaption></figure>
+| Step | Counted in $$A_i(t)$$ | Healthy $$T_i = A_{i+1}/A_i$$ |
+|---|---|---|
+| **1** | `POST /device_authorization` requests | $$T_1 \approx 0.95$$ |
+| **2** | Verification page loads (HTTP 200) | $$T_2 \approx 0.85$$ |
+| **3** | Authorizations granted | $$T_3 \approx 0.98$$ |
+| **4** | `POST /token` requests that return a token. Pending polls (`authorization_pending`) are left out, or they would swamp this step | $$T_4 \approx 0.99$$ |
+| **5** (success, $$S = 5$$) | API calls that succeed with the token | |
 
-Side by side, the broken step is obvious. When $$C(t)$$ drops, this is the question to ask: which $$A_i(t)$$ changed most?
+- Healthy $$C \approx 0.78$$. A user who restarts sends another device auth request, so retries show up in $$A_1(t)$$ and lower $$C(t)$$.
+- If $$T_2$$ drops from 0.85 to 0.70, every endpoint still returns HTTP 200, but $$C$$ drops from $$0.95 \times 0.85 \times 0.98 \times 0.99 = 0.78$$ to $$0.95 \times 0.70 \times 0.98 \times 0.99 = 0.65$$ (65%). This is the case from [Why journey metrics](#why-journey-metrics).
+- The simulations: 10k device auth requests per window unless traffic follows a daily cycle, and each $$T_i$$ jitters by ±0.02 ($$T_4$$ by ±0.01, as it can't go above 1).
 
-### Transition ratios
+<figure><img src="images/plot15_5.png" alt="OAuth2: traffic varies 20x, journey success stays flat"><figcaption><p>Traffic varies 20× over a daily cycle (500 to 10k requests per window), yet C(t) stays around 78%: volume changes the noise, not the ratio.</p></figcaption></figure>
 
-<figure><img src="images/plot4.png" alt="Transition ratios – normal vs bad"><figcaption><p>Transition ratios, healthy vs broken.</p></figcaption></figure>
-
-Per step: every transition looks healthy except $$T_2$$, where the flow broke.
-
-### Journey success rate
-
-<figure><img src="images/plot5.png" alt="Journey success rate – two windows"><figcaption><p>The number you'd alert on, and the basis of the journey SLI: 73% healthy → 16% broken.</p></figcaption></figure>
-
-## Part 2: Volume matters, sampling noise vs signal
-
-An **individuals chart** plots one value per window, here $$C(t)$$, against fixed limits from a healthy baseline. All control limits in Parts 2–4 are individuals-chart limits: mean ± 3σ, with σ estimated from the average moving range of the baseline windows.
-
-### Low volume: 100 requests per window
-
-<figure><img src="images/plot6.png" alt="C(t) with control limits – base, 100 requests"><figcaption><p>100 requests per window: wide limits.</p></figcaption></figure>
-
-At 100 requests per window, $$C(t)$$ bounces visibly (sampling noise, σ ≈ 0.04). The limits must be wide: about ±0.13.
-
-### Medium volume: 10k requests per window
-
-<figure><img src="images/plot7.png" alt="C(t) with control limits – base, 10k requests"><figcaption><p>10k requests: much smoother, tighter limits (about ±0.01). Good operating range for most production flows.</p></figcaption></figure>
-
-### High volume: 1M requests per window
-
-<figure><img src="images/plot14.png" alt="C(t) with control limits – base, 1M requests"><figcaption><p>1M requests: nearly flat (limits about ±0.001). Even tiny degradations are obvious.</p></figcaption></figure>
-
-Sampling noise shrinks with $$1/\sqrt{n}$$: 100× the traffic gives 10× tighter limits. This assumes each request succeeds or fails independently; Part 3 shows what happens when it doesn't.
-
-## Part 3: Real-world variability (jitter)
-
-Production systems have real variation: performance fluctuations, time-of-day effects, load changes. We model this as **jitter**: in each window, each $$T_i$$ is drawn uniformly from $$T_i ± 0.05$$ (5 percentage points). $$T_4 = 1.0$$ can't go higher, so it stays fixed.
-
-Does more volume remove it?
-
-### Low volume with jitter
-
-<figure><img src="images/plot9.png" alt="C(t) with control limits – base, 100 requests, jitter 0.05"><figcaption><p>100 requests per window with jitter: more variation, wider limits.</p></figcaption></figure>
-
-With 100 requests per window and jitter on each step, $$C(t)$$ varies more: σ goes from 0.04 (Part 2.1) to about 0.07. The mean stays around 73%, but single windows range widely, and the limits must be wide to cover this real variation.
-
-### High volume with jitter, same problem persists
-
-<figure><img src="images/plot10.png" alt="C(t) with control limits – base, 1M requests, jitter 0.05"><figcaption><p>Same flow and jitter, at 1M requests per window. The mean is still ~73%, but <strong>the control limits barely tighten</strong>.</p></figcaption></figure>
-
-Without jitter, going from 100 to 1M requests shrank the limits from ±0.13 to about ±0.001; with jitter, only from about ±0.20 to ±0.12. The variation is real: each window has a different success rate.
-
-Volume reduces sampling noise, not real variation: a system that fluctuates by a few points per window does so at any scale. How to measure σ from healthy data: [analysis.md](analysis.md#sampling-noise-vs-real-variation).
-
-### What can you do about jitter?
-
-- **Bigger windows**: 15-30 min instead of 5 min (slower detection)
-- **Moving averages**: smooth the signal (adds lag)
-- **Wider thresholds**: require sustained degradation to alert
-- **Fix the source**: improve system stability (best long-term)
-
-### Moving average control limits
-
-<figure><img src="images/plot15.png" alt="C(t) with moving average control limits"><figcaption><p>5-window moving average (blue) vs raw values (gray), at 1M requests with jitter.</p></figcaption></figure>
-
-Same scenario as 3.2, alerting on a 5-window moving average (blue) instead of the raw values (gray). The average of $$w$$ windows has $$\sqrt{w}$$ times less variation, so its limits are $$\sqrt{5} \approx 2.2\times$$ tighter: about ±0.055 instead of ±0.12. A smaller sustained drop is now enough to cross them.
-
-Compute σ from the **raw** values and divide by $$\sqrt{w}$$. Don't compute it from the moving ranges of the average itself: neighbouring averages share 4 of their 5 inputs, so they barely move from one window to the next, and the limits come out far too tight and fire on healthy traffic.
-
-The cost is lag. A 5-window average reacts to a sudden drop with about 2 windows of delay on average, and shows the full drop only after 5 windows (50 minutes with 10-minute windows).
-
-## Part 4: Detecting real failures
-
-After 40 healthy windows, we inject a failure from window 41: $$T_2$$ drops from 0.9 to 0.8.
-
-### Low volume: 100 requests
-
-<figure><img src="images/plot11.png" alt="C(t) with control limits – failure in T2, 100 requests"><figcaption><p>Detectable but noisy: wait for several bad windows before alerting.</p></figcaption></figure>
-
-### High volume: 1M requests
-
-<figure><img src="images/plot12.png" alt="C(t) with control limits – failure in T2, 1M requests"><figcaption><p>Immediately obvious. Every post-failure window would trigger.</p></figcaption></figure>
-
-Failures are detectable at any volume, but high volume makes detection cleaner.
+<figure><img src="images/plot16.png" alt="OAuth2: T1 drops, the moving average crosses its lower limit"><figcaption><p>T1 drops from 0.95 to 0.80 at window 21 (a broken link, confusing instructions). The 5-window moving average crosses its lower limit in the first bad window and settles around 66%.</p></figcaption></figure>
 
 ## Part 5: Window sizing
 
@@ -425,7 +361,7 @@ Aim for at least 100 journeys starting per window; 1,000+ is better. If volume i
 {% endstep %}
 {% endstepper %}
 
-**Example: OAuth2 device flow** (the [real-world example](#real-world-example-oauth2-device-authorization-grant) below)
+**Example: OAuth2 device flow** (the [example above](#oauth2-device-flow))
 
 | Transition | What happens | Average gap |
 |---|---|---|
@@ -437,7 +373,7 @@ Aim for at least 100 journeys starting per window; 1,000+ is better. If volume i
 The whole journey averages about 1.5–2 minutes. Using the rule:
 - 1-minute window: too small. With the window as short as the gap, the formula above breaks down; for this gap distribution, about 60% of step-2 requests started in an earlier window.
 - 5-minute window: fine for $$T_2$$–$$T_4$$, which have short gaps. Borderline for $$T_1$$ (about 20% spillover) and $$C(t)$$ (30–40%), which shows up as noise and as errors during traffic ramps.
-- 10–15-minute window: good for $$T_1$$ and $$C(t)$$. This is what the example below uses.
+- 10–15-minute window: good for $$T_1$$ and $$C(t)$$. This is what the example above uses.
 
 You can also use different windows per ratio: short windows for fast inner steps, longer for $$T_1$$ and $$C(t)$$.
 
@@ -446,97 +382,6 @@ You can also use different windows per ratio: short windows for fast inner steps
 Plot $$T_i(t)$$ at two window sizes (say 5 and 15 minutes) over a day with a traffic ramp. If the smaller window shows dips during ramp-ups, bumps during ramp-downs, or values above 1 that the larger one doesn't, the smaller window is too small.
 
 For flows with long or variable gaps (email verification over hours, human review, async jobs), a window long enough to contain the journey makes a slow, laggy signal ([other approaches](#when-this-approach-fits)).
-
-## Real-world example: OAuth2 Device Authorization Grant
-
-A real authentication flow: the OAuth2 Device Authorization Grant ([RFC 8628](https://datatracker.ietf.org/doc/html/rfc8628), the "device flow"), used by smart TVs, CLI tools, and IoT devices.
-
-### The flow
-
-| Step | What happens | How it shows |
-|---|---|---|
-| **1** | Device requests a device code | `POST /device_authorization` returns `device_code` and `user_code` |
-| **2** | User visits the verification URL | User opens a browser and navigates to the `verification_uri` |
-| **3** | User enters the code and authorizes | User types the `user_code`, reviews permissions, grants access |
-| **4** | Device polling succeeds | Device polls `POST /token` and receives valid tokens |
-| **5** (success, $$S = 5$$) | Device has a working access token | First API call with the token succeeds |
-
-### Metrics for a 10-minute window
-
-Per window $$t$$, count requests at each step (10 minutes follows [the rule above](#how-to-choose-window-size)):
-- $$A_1(t)$$: number of `POST /device_authorization` requests
-- $$A_2(t)$$: number of verification page GET requests (HTTP 200)
-- $$A_3(t)$$: number of successful authorization POST requests (consent granted)
-- $$A_4(t)$$: number of `POST /token` requests that return valid tokens (HTTP 200 with token). Pending polls (`authorization_pending`) are not counted, or they would swamp this step.
-- $$A_5(t)$$: number of requests to protected resources that succeed with these tokens
-
-Transitions:
-- $$T_1(t) = A_2(t)/A_1(t)$$: verification page loads per device auth request
-- $$T_2(t) = A_3(t)/A_2(t)$$: successful authorizations per verification page load
-- $$T_3(t) = A_4(t)/A_3(t)$$: token retrievals per authorization grant
-- $$T_4(t) = A_5(t)/A_4(t)$$: successful API calls per token retrieval
-
-Journey success rate:
-
-$$C(t) = \frac{A_5(t)}{A_1(t)} = T_1(t) \cdot T_2(t) \cdot T_3(t) \cdot T_4(t)$$
-
-A user who restarts the flow generates another device auth request, so retries show up in $$A_1(t)$$ and lower $$C(t)$$.
-
-### Typical healthy values
-
-| Ratio | Typical | Why |
-|---|---|---|
-| $$T_1$$ | ≈ 0.95 | Most device auth requests lead to verification page loads |
-| $$T_2$$ | ≈ 0.85 | Some verification page loads don't result in authorization completion |
-| $$T_3$$ | ≈ 0.98 | Authorization grants reliably lead to token retrieval |
-| $$T_4$$ | ≈ 0.99 | Tokens usually work for API calls |
-| $$C$$ (overall) | ≈ 0.78 | ~78% of device auth requests result in successful API calls |
-
-### What this catches
-
-If $$T_2$$ drops from 0.85 to 0.70, every endpoint still returns HTTP 200, but $$C$$ drops from $$0.95 \times 0.85 \times 0.98 \times 0.99 = 0.78$$ to $$0.95 \times 0.70 \times 0.98 \times 0.99 = 0.65$$ (65%). This is the case from [Why journey metrics](#why-journey-metrics).
-
-## Scenarios
-
-Each scenario shows how one kind of change affects the OAuth2 metrics. Each window has 10k device auth requests unless the traffic follows a daily cycle, and each $$T_i$$ jitters by ±0.02 (narrowed near 1, so $$T_4 = 0.99$$ only jitters by ±0.01). Degradations start at window 21, after 20 healthy windows.
-- Scenarios 1, 4 and 5 alert on a 5-window moving average, with limits computed as in [Moving average control limits](#moving-average-control-limits).
-- Scenarios 2 and 3 have a daily traffic cycle and use **volume-aware limits**: a **p-chart** (a control chart for a proportion, whose limits depend on each window's volume), plus the real variation measured in the healthy baseline.
-
-### Scenario 0: Volume independence
-
-<figure><img src="images/plot15_5.png" alt="OAuth2 - Volume independence"><figcaption><p>OAuth2: journey success stays flat while traffic varies 20×.</p></figcaption></figure>
-
-Traffic varies 20× (500→10k→500 req/window), yet $$C(t)$$ stays ~78%. Volume affects noise, not signal, which is why ratios work at any scale.
-
-### Scenario 1: User behavior change, T1 drops
-
-<figure><img src="images/plot16.png" alt="OAuth2 - User behavior change"><figcaption><p>OAuth2: user behavior change.</p></figcaption></figure>
-
-$$T_1$$ drops from 0.95 to 0.80 at window 21. Likely a UX issue (broken link, confusing instructions). The moving average crosses the lower limit in the first bad window and settles around 66%.
-
-### Scenario 2: System failure with seasonal traffic, T2 drops
-
-<figure><img src="images/plot17.png" alt="OAuth2 - System failure with seasonal traffic"><figcaption><p>OAuth2: system failure with seasonal traffic.</p></figcaption></figure>
-
-Daily traffic pattern with $$T_2$$ degrading at window 21. The limits are fixed from the healthy baseline ([why](#journey-alerts)), so every bad window stays below them.
-
-### Scenario 3: Seasonal pattern, healthy flow
-
-<figure><img src="images/plot18.png" alt="OAuth2 - Seasonal volume"><figcaption><p>Daily cycle, healthy throughout. The limits widen at night (about ±0.08 at 500 requests/window) and tighten at peak (about ±0.06 at 10k).</p></figcaption></figure>
-
-At peak (10k requests), sampling noise (σ ≈ 0.004) is small next to the real variation from the ±0.02 jitter per step (σ ≈ 0.02), so the jitter sets the width. At night (500 requests) the two are about equal, so the limits widen by only about a third. As in Part 3, past some volume more traffic stops tightening the limits.
-
-### Scenario 4: Polling failure, T3 drops
-
-<figure><img src="images/plot19.png" alt="OAuth2 - Polling failure"><figcaption><p>OAuth2: polling failure.</p></figcaption></figure>
-
-$$T_3$$ drops from 0.98 to 0.85. Polling timeouts or rate limiting.
-
-### Scenario 5: Token validation, T4 drops
-
-<figure><img src="images/plot20.png" alt="OAuth2 - Token validation failure"><figcaption><p>OAuth2: token validation failure.</p></figcaption></figure>
-
-$$T_4$$ drops from 0.99 to 0.90. Tokens are issued but fail on API calls.
 
 ## Operating journey metrics
 
@@ -572,7 +417,7 @@ Window size for the ratios follows the journey's timing ([Part 5](#part-5-window
 
 - **Page on $$C(t)$$** of each key journey: it's a symptom users feel ([alerts.md](alerts.md#what-to-page-on)). Debug with $$T_i(t)$$: the one that dropped points at the broken step.
 - **Control limits from the observed σ** of healthy windows: alert below μ − 3σ, sustained over a few windows. Binomial σ (from volume alone) fires constantly ([why](analysis.md#sampling-noise-vs-real-variation)).
-- **Fixed, not rolling, limits**: compute them from a known-good period and update them deliberately as the system evolves. Limits recomputed from a rolling window slowly absorb a failure, and the alert clears itself ([Scenario 2](#scenario-2-system-failure-with-seasonal-traffic-t2-drops), [analysis.md](analysis.md#baselines-and-seasonality)).
+- **Fixed, not rolling, limits**: compute them from a known-good period and update them deliberately as the system evolves. Limits recomputed from a rolling window slowly absorb a failure, and the alert clears itself ([analysis.md](analysis.md#baselines-and-seasonality)).
 - **Window** sized to the whole journey ([Part 5](#part-5-window-sizing)).
 - **Not with burn rates.** [Burn-rate tiers](alerts.md#slo-burn-rate-alerts) assume a small error budget (targets of 99% and up). A journey's normal failures include abandonment (e.g. $$C \approx 0.92$$), so its budget is large and a 14.4× burn is impossible. Journeys still have an SLO (target from the baseline, failure fraction $$1 - C$$): track the [journey SLI](#what-these-metrics-tell-you) against it over a month for reporting, and alert with control limits.
 - **Journey volume** $$A_1(t)$$ is traffic: alert on drops from a [time-of-week baseline](alerts.md#traffic-volume).
@@ -589,7 +434,7 @@ when:  auth_journey_success < 0.875 for 15m
 
 Control charts for $$C(t)$$ and $$T_i(t)$$:
 - **Individuals chart**: simple, works when volume per window is roughly stable.
-- **p-chart**: limits widen at low volume and tighten at high volume. On its own it assumes sampling noise is the only noise, so at high volume it fires on normal jitter. Add the real variation from a healthy baseline (Scenario 3, or a Laney p′ chart, a p-chart whose limits are widened by the window-to-window variation measured in the baseline).
+- **p-chart**: limits widen at low volume and tighten at high volume. On its own it assumes sampling noise is the only noise, so at high volume it fires on normal jitter. Add the real variation from a healthy baseline (a Laney p′ chart, a p-chart whose limits are widened by the window-to-window variation measured in the baseline).
 - **Instead of control charts**, you can use simple alert rules (for example static thresholds on $$C(t)$$) or your metrics backend's anomaly detection or forecasting, with the same $$T_i(t)$$ and $$C(t)$$ as inputs.
 
 ### Sizing a regression
