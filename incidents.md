@@ -12,11 +12,11 @@ What to do when something breaks, at a high level. The other chapters supply the
 
 ## Triage, top down
 
-1. **Scope**: which key actions, since when, for whom ([key action dashboard](dashboards.md#2-key-action-one-per-key-action)). Compare with the same window last week to confirm it's real ([baselines](analysis.md#baselines-and-seasonality)).
-2. **What changed**: deploys, config and flag changes at the start time ([change timeline](dashboards.md#5-changes-and-incidents)).
+1. **Scope**: which key actions, since when, for whom ([key action dashboard](dashboards.md#dashboard-2-key-action-one-per-key-action)). Compare with the same window last week to confirm it's real ([baselines](analysis.md#baselines-and-seasonality)).
+2. **What changed**: deploys, config and flag changes at the start time ([change timeline](dashboards.md#dashboard-5-changes-and-incidents)).
 3. **Mitigate**: roll back, turn the flag off, drain, scale out, or block the bad traffic. Check it worked on the SLI that alerted.
-4. **Locate**: client, edge or origin ([vantage points](kpis.md#measure-where-the-user-is)); one instance or all ([outliers](analysis.md#outliers)); then the [dependencies](dashboards.md#4-dependencies-and-resources).
-5. **Size it**: excess failed key actions ([estimate the effect](kpis.md#3-estimate-the-effect-on-the-kpi)), with `uv run src/calc.py wilson <failed> <attempts> --baseline <rate>`.
+4. **Locate**: client, edge or origin ([vantage points](kpis.md#measure-where-the-user-is)); one instance or all ([outliers](analysis.md#outliers)); then the [dependencies](dashboards.md#dashboard-4-dependencies-and-resources).
+5. **Size it**: excess failed key actions ([estimate the effect](kpis.md#estimate-the-effect-on-the-kpi)), with `uv run src/calc.py wilson <failed> <attempts> --baseline <rate>`.
 
 ## Running the incident
 

@@ -79,7 +79,7 @@ groups:
 
 The example counts server-side 5xx for brevity; prefer client or edge counts, which also include timeouts and network failures ([kpis.md](kpis.md#measure-where-the-user-is)).
 
-For a key action's SLO, select its critical-path calls, e.g. with a `key_action="save_document"` label ([kpis.md](kpis.md#1-map-it)).
+For a key action's SLO, select its critical-path calls, e.g. with a `key_action="save_document"` label ([kpis.md](kpis.md#map-it)).
 
 ## Threshold patterns by metric type
 

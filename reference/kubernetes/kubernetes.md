@@ -30,12 +30,12 @@ Prometheus (scraping the kubelet's cAdvisor endpoint, kube-state-metrics and nod
 |---|---|
 | [Key action SLI](../../kpis.md#measure-where-the-user-is) | Server or ingress view only: success / all of its critical-path calls |
 | [Error definition](../../kpis.md#what-counts-as-an-error) | Regex on `http_response_status_code`, per route |
-| [RED per API call](../../dashboards.md#3-api-calls-frontend--backend) | `sum by (http_route)` over the [OTel HTTP histogram](https://opentelemetry.io/docs/specs/semconv/http/http-metrics/) |
+| [RED per API call](../../dashboards.md#dashboard-3-api-calls-frontend-to-backend) | `sum by (http_route)` over the [OTel HTTP histogram](https://opentelemetry.io/docs/specs/semconv/http/http-metrics/) |
 | [Burn-rate pair](../../alerts.md#slo-burn-rate-alerts) | Recording rules per window, `and` in one rule, as in alerts.md |
 | [Low traffic](../../alerts.md#low-traffic) | The alerts.md count rule works as written |
 | [Zero traffic](../../alerts.md#durations-windows-and-false-alarms) | A no-success rule with `or vector(0)` |
 | [Baseline](../../analysis.md#baselines-and-seasonality) | `offset 1w` on the same selector |
-| [Change markers](../../dashboards.md#5-changes-and-incidents) | Annotation on `changes(kube_deployment_status_observed_generation[5m]) > 0`, or CI calling the API |
+| [Change markers](../../dashboards.md#dashboard-5-changes-and-incidents) | Annotation on `changes(kube_deployment_status_observed_generation[5m]) > 0`, or CI calling the API |
 | Exploring by any field, [business KPIs](../../kpis.md#level-1-business-kpis) | Not here ([gaps](#gaps-and-fallbacks)) |
 
 - **Names**: Prometheus' [OTLP receiver](https://prometheus.io/docs/guides/opentelemetry/) turns `http.server.request.duration` into `http_server_request_duration_seconds`, attributes into `http_route` etc., and `service.name` into `job` (default translation strategy).

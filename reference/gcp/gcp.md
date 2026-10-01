@@ -47,7 +47,7 @@ For a service that writes one structured log per request, Cloud Logging and Clou
 
 ## Worked example
 
-Example key action Save, critical-path call `PUT /documents/:id` ([Map it](../../kpis.md#1-map-it)); example SLO 99.9% over 30 days. The service logs one [wide event](../../events.md#the-wide-event-way-one-event) per request; errors are 5xx and unexpected errors ([What counts as an error](../../kpis.md#what-counts-as-an-error)).
+Example key action Save, critical-path call `PUT /documents/:id` ([Map it](../../kpis.md#map-it)); example SLO 99.9% over 30 days. The service logs one [wide event](../../events.md#the-wide-event-way-one-event) per request; errors are 5xx and unexpected errors ([What counts as an error](../../kpis.md#what-counts-as-an-error)).
 
 ```sh
 F='jsonPayload.main=true AND jsonPayload.key_action="save_document"'
@@ -57,7 +57,7 @@ gcloud logging metrics create save_errors --description="Save: failed requests" 
 ```
 
 - **SLI**: a custom service with a request-based SLO, `goal: 0.999`, `rollingPeriod: "2592000s"`, `totalServiceFilter` on `logging.googleapis.com/user/save_requests` and `badServiceFilter` on `.../save_errors`.
-- **Panel** ([key action dashboard](../../dashboards.md#2-key-action-one-per-key-action)): `select_slo_health` next to `save_requests` per 5 minutes, with Compare to Past at 1 week.
+- **Panel** ([key action dashboard](../../dashboards.md#dashboard-2-key-action-one-per-key-action)): `select_slo_health` next to `save_requests` per 5 minutes, with Compare to Past at 1 week.
 - **Page alert**: `uv run src/calc.py burn --slo 99.9` gives burn rates 14.4× (1 h and 5 min) and 6× (6 h and 30 min) ([burn rates](../../alerts.md#slo-burn-rate-alerts)). The burn-rate selector returns the burn rate itself, so the threshold is 14.4, not 1.44%. One policy per pair, combiner AND:
 
 ```text

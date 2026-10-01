@@ -16,33 +16,33 @@ Fill in [templates/tool-map.yaml](https://github.com/arnauio/metrics/blob/main/t
 
 {% stepper %}
 {% step %}
-#### 1. Inventory the building blocks
+#### Inventory the building blocks
 
 The tool's name for: events and spans, metric types (can they be summed across a tag?), metrics derived from logs or spans, the query language, panel types, alert types (threshold, two conditions joined with AND, anomaly, composite) and change markers.
 {% endstep %}
 
 {% step %}
-#### 2. Extract the limits
+#### Extract the limits
 
 Sampling, retention (at least the 30-day SLO period), delay (compare it with the 5-minute short window), the longest alert window, cardinality, what the bill grows with, and which features need a higher plan. A window is one aggregate over its whole length, not several short checks.
 {% endstep %}
 
 {% step %}
-#### 3. Translate each concept
+#### Translate each concept
 
-How the tool does the [key action SLI](kpis.md#measure-where-the-user-is), [RED per API call](dashboards.md#3-api-calls-frontend--backend), percentiles from a distribution, [burn-rate pairs](alerts.md#slo-burn-rate-alerts), [low traffic](alerts.md#low-traffic), zero traffic as no data, last week's baseline, change markers, and exploring by any field. Note which of the tool's own fields hold the wide event's (status, route), and what you must emit yourself. Vendor SLO objects often take the burn rate (14.4) as the threshold, not the error rate, and may fill missing data, so keep the zero-traffic alert. If your code is the edge (an edge function), count from outside it, so crashes still count.
+How the tool does the [key action SLI](kpis.md#measure-where-the-user-is), [RED per API call](dashboards.md#dashboard-3-api-calls-frontend-to-backend), percentiles from a distribution, [burn-rate pairs](alerts.md#slo-burn-rate-alerts), [low traffic](alerts.md#low-traffic), zero traffic as no data, last week's baseline, change markers, and exploring by any field. Note which of the tool's own fields hold the wide event's (status, route), and what you must emit yourself. Vendor SLO objects often take the burn rate (14.4) as the threshold, not the error rate, and may fill missing data, so keep the zero-traffic alert. If your code is the edge (an edge function), count from outside it, so crashes still count.
 {% endstep %}
 
 {% step %}
-#### 4. Flag gaps and fallbacks
+#### Flag gaps and fallbacks
 
 For each missing concept: the fallback and what it loses. For example, no AND of two windows → a composite alert; alert windows under 3 days → [keep the budget share](alerts.md#slo-burn-rate-alerts) or a scheduled query; no change markers → a panel of deploy counts. A scheduled job that evaluates alerts needs a heartbeat check, or it fails silently.
 {% endstep %}
 
 {% step %}
-#### 5. Check it with one key action
+#### Check it with one key action
 
-Build its SLI query, one [key action panel](dashboards.md#2-key-action-one-per-key-action) and the page-level burn-rate pair (`uv run src/calc.py burn --slo <target>`). Whatever you couldn't build goes into step 4. A tool that shouldn't page, such as product analytics, builds its panel and names the tool that pages.
+Build its SLI query, one [key action panel](dashboards.md#dashboard-2-key-action-one-per-key-action) and the page-level burn-rate pair (`uv run src/calc.py burn --slo <target>`). Whatever you couldn't build goes into step 4. A tool that shouldn't page, such as product analytics, builds its panel and names the tool that pages.
 {% endstep %}
 {% endstepper %}
 

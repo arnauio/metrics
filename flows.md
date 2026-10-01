@@ -48,16 +48,16 @@ Start from each business KPI's key action ([kpis.md](kpis.md#level-1-business-kp
 {% endstep %}
 {% step %}
 
-#### Rank by traffic × business value
+#### Rank by traffic and business value
 
 Login and "load the main screen" usually come first, because every other journey depends on them.
 
 {% endstep %}
 {% step %}
 
-#### Start with 3–5 and map their calls
+#### Start with 3 to 5 and map their calls
 
-Map each step to its calls, marking the critical path ([Map it](kpis.md#1-map-it)).
+Map each step to its calls, marking the critical path ([Map it](kpis.md#map-it)).
 
 {% endstep %}
 {% step %}
@@ -252,29 +252,29 @@ $$C(t) = A_5(t)/A_1(t) = T_1(t)\cdot T_2(t)\cdot T_3(t)\cdot T_4(t)$$, with 90% 
 
 The building blocks: arrivals, transitions and journey success.
 
-### 1.1 Arrivals per step, healthy flow
+### Arrivals per step, healthy flow
 
 <figure><img src="images/plot1.png" alt="Arrivals per step – normal"><figcaption><p>1,000 requests start at Step 1. With 90% success per step, the counts fall off gradually: Step 1 → 1,000, Step 2 → 900, Step 3 → 810, Step 4 → 729, Step 5 (success) → 729.</p></figcaption></figure>
 
-### 1.2 Arrivals per step, broken step
+### Arrivals per step, broken step
 
 <figure><img src="images/plot2.png" alt="Arrivals per step – T2 drops to 0.2"><figcaption><p>Arrivals per step when T2 drops to 0.2.</p></figcaption></figure>
 
 Same starting volume, but $$T_2$$ (Step 2 → Step 3) drops to 20%. Step 3 onward sees far fewer requests: the cliff sits between Step 2 and Step 3 and carries through the rest of the flow.
 
-### 1.3 Side-by-side comparison
+### Side-by-side comparison
 
 <figure><img src="images/plot3.png" alt="Arrivals per step – normal vs bad"><figcaption><p>Arrivals per step, healthy vs broken.</p></figcaption></figure>
 
 Side by side, the broken step is obvious. When $$C(t)$$ drops, this is the question to ask: which $$A_i(t)$$ changed most?
 
-### 1.4 Transition ratios
+### Transition ratios
 
 <figure><img src="images/plot4.png" alt="Transition ratios – normal vs bad"><figcaption><p>Transition ratios, healthy vs broken.</p></figcaption></figure>
 
 Per step: every transition looks healthy except $$T_2$$, where the flow broke.
 
-### 1.5 Journey success rate
+### Journey success rate
 
 <figure><img src="images/plot5.png" alt="Journey success rate – two windows"><figcaption><p>The number you'd alert on, and the basis of the journey SLI: 73% healthy → 16% broken.</p></figcaption></figure>
 
@@ -282,17 +282,17 @@ Per step: every transition looks healthy except $$T_2$$, where the flow broke.
 
 An **individuals chart** plots one value per window, here $$C(t)$$, against fixed limits from a healthy baseline. All control limits in Parts 2–4 are individuals-chart limits: mean ± 3σ, with σ estimated from the average moving range of the baseline windows.
 
-### 2.1 Low volume: 100 requests/window
+### Low volume: 100 requests per window
 
 <figure><img src="images/plot6.png" alt="C(t) with control limits – base, 100 requests"><figcaption><p>100 requests per window: wide limits.</p></figcaption></figure>
 
 At 100 requests per window, $$C(t)$$ bounces visibly (sampling noise, σ ≈ 0.04). The limits must be wide: about ±0.13.
 
-### 2.2 Medium volume: 10k requests/window
+### Medium volume: 10k requests per window
 
 <figure><img src="images/plot7.png" alt="C(t) with control limits – base, 10k requests"><figcaption><p>10k requests: much smoother, tighter limits (about ±0.01). Good operating range for most production flows.</p></figcaption></figure>
 
-### 2.3 High volume: 1M requests/window
+### High volume: 1M requests per window
 
 <figure><img src="images/plot14.png" alt="C(t) with control limits – base, 1M requests"><figcaption><p>1M requests: nearly flat (limits about ±0.001). Even tiny degradations are obvious.</p></figcaption></figure>
 
@@ -304,13 +304,13 @@ Production systems have real variation: performance fluctuations, time-of-day ef
 
 Does more volume remove it?
 
-### 3.1 Low volume with jitter
+### Low volume with jitter
 
 <figure><img src="images/plot9.png" alt="C(t) with control limits – base, 100 requests, jitter 0.05"><figcaption><p>100 requests per window with jitter: more variation, wider limits.</p></figcaption></figure>
 
 With 100 requests per window and jitter on each step, $$C(t)$$ varies more: σ goes from 0.04 (Part 2.1) to about 0.07. The mean stays around 73%, but single windows range widely, and the limits must be wide to cover this real variation.
 
-### 3.2 High volume with jitter, same problem persists
+### High volume with jitter, same problem persists
 
 <figure><img src="images/plot10.png" alt="C(t) with control limits – base, 1M requests, jitter 0.05"><figcaption><p>Same flow and jitter, at 1M requests per window. The mean is still ~73%, but <strong>the control limits barely tighten</strong>.</p></figcaption></figure>
 
@@ -318,14 +318,14 @@ Without jitter, going from 100 to 1M requests shrank the limits from ±0.13 to a
 
 Volume reduces sampling noise, not real variation: a system that fluctuates by a few points per window does so at any scale. How to measure σ from healthy data: [analysis.md](analysis.md#sampling-noise-vs-real-variation).
 
-### 3.3 What can you do about jitter?
+### What can you do about jitter?
 
 - **Bigger windows**: 15-30 min instead of 5 min (slower detection)
 - **Moving averages**: smooth the signal (adds lag)
 - **Wider thresholds**: require sustained degradation to alert
 - **Fix the source**: improve system stability (best long-term)
 
-### 3.4 Moving average control limits
+### Moving average control limits
 
 <figure><img src="images/plot15.png" alt="C(t) with moving average control limits"><figcaption><p>5-window moving average (blue) vs raw values (gray), at 1M requests with jitter.</p></figcaption></figure>
 
@@ -339,11 +339,11 @@ The cost is lag. A 5-window average reacts to a sudden drop with about 2 windows
 
 After 40 healthy windows, we inject a failure from window 41: $$T_2$$ drops from 0.9 to 0.8.
 
-### 4.1 Low volume: 100 requests
+### Low volume: 100 requests
 
 <figure><img src="images/plot11.png" alt="C(t) with control limits – failure in T2, 100 requests"><figcaption><p>Detectable but noisy: wait for several bad windows before alerting.</p></figcaption></figure>
 
-### 4.2 High volume: 1M requests
+### High volume: 1M requests
 
 <figure><img src="images/plot12.png" alt="C(t) with control limits – failure in T2, 1M requests"><figcaption><p>Immediately obvious. Every post-failure window would trigger.</p></figcaption></figure>
 
@@ -357,9 +357,9 @@ The most common mistake is a window too small for the flow.
 
 {% endhint %}
 
-[5.3](#53-how-to-choose-window-size) gives the rule for the window $$W$$. For your own gaps: `uv run src/calc.py spillover --gap <avg gap> --window <W>`.
+[5.3](#how-to-choose-window-size) gives the rule for the window $$W$$. For your own gaps: `uv run src/calc.py spillover --gap <avg gap> --window <W>`.
 
-### 5.1 Why window size matters
+### Why window size matters
 
 Each window counts whatever arrives in it. A request that enters step $$i$$ just before a window boundary reaches step $$i+1$$ in the next window. On average, the share of $$A_{i+1}(t)$$ that started in an earlier window is about
 
@@ -379,7 +379,7 @@ With changing traffic, step $$i+1$$ sees the traffic of one gap ago. When traffi
 
 It's Little's Law: at any moment, about (arrival rate × average gap) journeys are between two steps. The window has to be long enough that this in-flight group is a small part of what it counts.
 
-### 5.2 What a too-small window looks like
+### What a too-small window looks like
 
 <figure><img src="images/plot13.png" alt="Traffic spike distorts T1(t) in small windows"><figcaption><p>A traffic spike distorts T1(t) in small windows, though nothing is broken.</p></figcaption></figure>
 
@@ -395,7 +395,7 @@ Signs that your window is too small:
 
 If per-step counts differ by orders of magnitude (say 1,000 at step 1 and 500,000 at step 2), that is not a window problem. More likely you're counting something else: polling requests, a missing status filter, or an endpoint shared with another flow.
 
-### 5.3 How to choose window size
+### How to choose window size
 
 {% stepper %}
 {% step %}
@@ -441,7 +441,7 @@ The whole journey averages about 1.5–2 minutes. Using the rule:
 
 You can also use different windows per ratio: short windows for fast inner steps, longer for $$T_1$$ and $$C(t)$$.
 
-### 5.4 How to validate
+### How to validate
 
 Plot $$T_i(t)$$ at two window sizes (say 5 and 15 minutes) over a day with a traffic ramp. If the smaller window shows dips during ramp-ups, bumps during ramp-downs, or values above 1 that the larger one doesn't, the smaller window is too small.
 
@@ -463,7 +463,7 @@ A real authentication flow: the OAuth2 Device Authorization Grant ([RFC 8628](ht
 
 ### Metrics for a 10-minute window
 
-Per window $$t$$, count requests at each step (10 minutes follows [the rule above](#53-how-to-choose-window-size)):
+Per window $$t$$, count requests at each step (10 minutes follows [the rule above](#how-to-choose-window-size)):
 - $$A_1(t)$$: number of `POST /device_authorization` requests
 - $$A_2(t)$$: number of verification page GET requests (HTTP 200)
 - $$A_3(t)$$: number of successful authorization POST requests (consent granted)
@@ -499,7 +499,7 @@ If $$T_2$$ drops from 0.85 to 0.70, every endpoint still returns HTTP 200, but $
 ## Scenarios
 
 Each scenario shows how one kind of change affects the OAuth2 metrics. Each window has 10k device auth requests unless the traffic follows a daily cycle, and each $$T_i$$ jitters by ±0.02 (narrowed near 1, so $$T_4 = 0.99$$ only jitters by ±0.01). Degradations start at window 21, after 20 healthy windows.
-- Scenarios 1, 4 and 5 alert on a 5-window moving average, with limits computed as in [Part 3.4](#34-moving-average-control-limits).
+- Scenarios 1, 4 and 5 alert on a 5-window moving average, with limits computed as in [Moving average control limits](#moving-average-control-limits).
 - Scenarios 2 and 3 have a daily traffic cycle and use **volume-aware limits**: a **p-chart** (a control chart for a proportion, whose limits depend on each window's volume), plus the real variation measured in the healthy baseline.
 
 ### Scenario 0: Volume independence
@@ -547,7 +547,7 @@ Dashboards, alerts and impact sizing for journeys, on top of the per-call ones i
 Add the counters to your [stack map](dashboards.md#map-to-your-stack):
 - **Journey counters**: a metrics backend or event pipeline, such as Prometheus, Cloud Monitoring, or wide events ([events.md](events.md)).
 
-In the [KPI overview](dashboards.md#1-kpi-overview):
+In the [KPI overview](dashboards.md#dashboard-1-kpi-overview):
 
 | Panel | What it shows | Chart |
 |---|---|---|

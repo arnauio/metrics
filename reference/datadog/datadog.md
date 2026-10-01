@@ -45,13 +45,13 @@ The model in brief; check Datadog's pricing page and your contract for numbers. 
 | Guide concept | Datadog |
 |---|---|
 | [Key action SLI](../../kpis.md#measure-where-the-user-is) | Metric-based SLO over RUM-based metrics (client), ALB counts (edge) or trace metrics (server) |
-| [RED per API call](../../dashboards.md#3-api-calls-frontend--backend) | Trace metrics by `resource_name` |
+| [RED per API call](../../dashboards.md#dashboard-3-api-calls-frontend-to-backend) | Trace metrics by `resource_name` |
 | [Latency percentiles](../../signals.md#metric-types) | `trace.<span>` distribution; latency SLO by [threshold query](https://docs.datadoghq.com/metrics/distributions/) |
 | [Burn-rate pair](../../alerts.md#slo-burn-rate-alerts) | SLO alert, burn rate: both windows over the threshold; short = 1/12 of long by default ([burn rate](https://docs.datadoghq.com/service_management/service_level_objectives/burn_rate/)) |
 | [Low traffic](../../alerts.md#low-traffic) | Metric monitor on the error count, plus a monitor on `hits` as the gate, joined by a [composite](https://docs.datadoghq.com/monitors/types/composite/) |
 | [Zero traffic](../../alerts.md#durations-windows-and-false-alarms) | "Show NO DATA and notify" on ratio monitors; a count monitor on successful hits below 1 (counts evaluate as zero) ([no data](https://docs.datadoghq.com/monitors/configuration/)) |
 | [Baseline](../../analysis.md#baselines-and-seasonality) | `calendar_shift()` or `timeshift()` on panels ([timeshift](https://docs.datadoghq.com/dashboards/functions/timeshift/)); [anomaly monitor](https://docs.datadoghq.com/monitors/types/anomaly/) with weekly seasonality |
-| [Change markers](../../dashboards.md#5-changes-and-incidents) | [Change Overlays](https://docs.datadoghq.com/dashboards/change_overlays/): deploys from the `version` tag ([deployment tracking](https://docs.datadoghq.com/tracing/services/deployment_tracking/)), flags, config ([Change Tracking](https://docs.datadoghq.com/change_tracking/)) |
+| [Change markers](../../dashboards.md#dashboard-5-changes-and-incidents) | [Change Overlays](https://docs.datadoghq.com/dashboards/change_overlays/): deploys from the `version` tag ([deployment tracking](https://docs.datadoghq.com/tracing/services/deployment_tracking/)), flags, config ([Change Tracking](https://docs.datadoghq.com/change_tracking/)) |
 | [Exploring by any field](../../events.md#common-queries) | Trace Explorer: Live (all ingested spans, 15 minutes), then indexed spans ([apm.md](apm.md#troubleshooting-with-enriched-traces)) |
 
 ## Gaps and fallbacks
@@ -71,7 +71,7 @@ Dashboards for a Java service on Kubernetes and AWS, one dashboard group per lay
 - **RED** (Rate, Errors, Duration) applies to request-driven components; **USE** (Utilization, Saturation, Errors) applies to resources ([kpis.md](../../kpis.md#the-kpi-tree); thresholds in [alerts.md](../../alerts.md#threshold-patterns-by-metric-type)).
 - **Labels.** Each signal below is labelled with its letter; a row without a letter isn't a USE signal of that layer. Metric names are those of the Datadog Kubernetes, AWS and APM integrations; check them against your account's Metrics Summary.
 
-### Kubernetes (node/pod layer): USE
+### Kubernetes node and pod layer: USE
 
 | Signal | Metric |
 |---|---|

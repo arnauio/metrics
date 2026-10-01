@@ -10,7 +10,7 @@ What should we show, and to whom? Which dashboards, panels and data. Builds on t
 4. **Rates with denominators**: show volume next to error and success rates, because a count that doubles with traffic isn't an incident ([pitfalls](analysis.md#pitfalls)).
 5. **Percentiles from distributions**: p95 from the histogram of all requests, because an average of per-host or per-endpoint p95s isn't a p95 ([pitfalls](analysis.md#pitfalls)).
 6. **Compare with a baseline** (same window last week, or [control limits](alerts.md#threshold-patterns-by-metric-type)), because a value alone isn't high or low.
-7. **Change markers on every time series** (deploys, config and flag changes, incidents), one shared time range per dashboard, because "what changed?" comes first in an incident ([Changes and incidents](#5-changes-and-incidents)).
+7. **Change markers on every time series** (deploys, config and flag changes, incidents), one shared time range per dashboard, because "what changed?" comes first in an incident ([Changes and incidents](#dashboard-5-changes-and-incidents)).
 8. **Chart hygiene**: at most 3 series per chart; no pie charts; the same colours everywhere: green healthy · yellow degraded · red failing · grey no data. More series are unreadable, pies hide small differences, and shared colours read at a glance.
 9. **Default time ranges**: incident 15 min–4 h · operations 1–24 h · capacity 7–90 days · business KPIs this week and month, because long ranges roll points into coarser buckets and hide short spikes.
 10. **New dimensions go on events; metric tags stay bounded**, because cardinality is cheap on events and series count multiplies across metric tags ([Tagging and cardinality](#tagging-and-cardinality)).
@@ -39,7 +39,7 @@ A dashboard can only break down by dimensions recorded as tags or fields.
 
 Drill-down: KPI tile (dashboard 1) → its key action (dashboard 2) → the key action's calls (dashboard 3) → their dependencies (dashboard 4). Dashboard 5's change markers overlay all of them.
 
-### 1. KPI overview
+### Dashboard 1: KPI overview
 
 | Panel | What it shows | Chart |
 |---|---|---|
@@ -50,19 +50,19 @@ Drill-down: KPI tile (dashboard 1) → its key action (dashboard 2) → the key 
 | Open issues | Firing alerts, open incidents | List |
 | Changes | Deploys and flag changes in the last 24 h | Timeline markers |
 
-### 2. Key action (one per key action)
+### Dashboard 2: Key action (one per key action)
 
 | Panel | What it shows | Chart |
 |---|---|---|
-| Success rate | Share of attempts in which every critical-path call succeeded ([definition](kpis.md#1-map-it)), against the SLO | Time series |
-| Latency | p75, p95 along the critical path, as the user sees it ([definition](kpis.md#1-map-it)) | Time series |
+| Success rate | Share of attempts in which every critical-path call succeeded ([definition](kpis.md#map-it)), against the SLO | Time series |
+| Latency | p75, p95 along the critical path, as the user sees it ([definition](kpis.md#map-it)) | Time series |
 | Volume | Attempts, with last week's line | Time series |
 | Failing calls | Top critical-path calls by error count | Table |
 | Segments | Success rate by platform, client version, region, plan tier | Table or heatmap |
 
 For multi-step flows (funnels, step transitions), see [flows.md](flows.md) (advanced).
 
-### 3. API calls: frontend → backend
+### Dashboard 3: API calls, frontend to backend
 
 | Panel | What it shows | Chart |
 |---|---|---|
@@ -82,7 +82,7 @@ For multi-step flows (funnels, step transitions), see [flows.md](flows.md) (adva
 Percentiles don't subtract: client p95 minus server p95 is only a rough sign.
 {% endhint %}
 
-### 4. Dependencies and resources
+### Dashboard 4: Dependencies and resources
 
 | Panel | What it shows | Chart |
 |---|---|---|
@@ -92,7 +92,7 @@ Percentiles don't subtract: client p95 minus server p95 is only a rough sign.
 | Caches | Hit rate, evictions, latency | Time series |
 | Compute | CPU, memory vs limits, restarts, concurrency per service | Time series, per instance |
 
-### 5. Changes and incidents
+### Dashboard 5: Changes and incidents
 
 The first stop in [triage](incidents.md#triage-top-down) after scoping: what changed when it started.
 

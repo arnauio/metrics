@@ -45,7 +45,7 @@ For an API served by a Worker, Cloudflare covers the edge and server levels of t
 
 ## Worked example
 
-Example key action Save, critical-path call `PUT /documents/:id` ([Map it](../../kpis.md#1-map-it)); example SLO 99.9%. The API Worker logs a [wide event](../../events.md#the-wide-event-way-one-event) `{type: "request", key_action, route, error, error_expected}`; the Tail Worker adds `outcome` and status ([What counts as an error](../../kpis.md#what-counts-as-an-error)). Reading the object from `message[0]` is not verified.
+Example key action Save, critical-path call `PUT /documents/:id` ([Map it](../../kpis.md#map-it)); example SLO 99.9%. The API Worker logs a [wide event](../../events.md#the-wide-event-way-one-event) `{type: "request", key_action, route, error, error_expected}`; the Tail Worker adds `outcome` and status ([What counts as an error](../../kpis.md#what-counts-as-an-error)). Reading the object from `message[0]` is not verified.
 
 ```js
 const w = ev.logs.map((l) => l.message[0]).find((m) => m?.type === "request") ?? {};
@@ -59,7 +59,7 @@ SELECT sumIf(_sample_interval, double1 = 0) / SUM(_sample_interval) AS sli, SUM(
 FROM api_sli WHERE index1 = 'save_document' AND timestamp > NOW() - INTERVAL '30' DAY
 ```
 
-- **Panel** ([key action dashboard](../../dashboards.md#2-key-action-one-per-key-action)): the same query in Grafana, grouped per 5 minutes, success rate next to attempts.
+- **Panel** ([key action dashboard](../../dashboards.md#dashboard-2-key-action-one-per-key-action)): the same query in Grafana, grouped per 5 minutes, success rate next to attempts.
 - **Page alert**: `uv run src/calc.py burn --slo 99.9` gives threshold = burn rate × (1 − 0.999): 1.44% over 1 h and 5 min, 0.60% over 6 h and 30 min ([burn rates](../../alerts.md#slo-burn-rate-alerts)). A cron Worker runs the query per window and pages when both windows of a pair exceed it.
 - **Zero and low traffic**: no attempts in 5 minutes is no data, not 0%; add a [volume floor](../../alerts.md#require-enough-volume) on the short window.
 

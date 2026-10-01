@@ -27,7 +27,7 @@ CloudWatch covers the server view of the [KPI tree](../../kpis.md#the-kpi-tree):
 | Guide concept | In CloudWatch |
 |---|---|
 | [Key action SLI](../../kpis.md#measure-where-the-user-is) | Metric math `1 - err / req` over the critical-path call's counters |
-| [RED per API call](../../dashboards.md#3-api-calls-frontend--backend) | `Requests`, `Errors`, `Latency` filters with a `route` dimension (route templates) |
+| [RED per API call](../../dashboards.md#dashboard-3-api-calls-frontend-to-backend) | `Requests`, `Errors`, `Latency` filters with a `route` dimension (route templates) |
 | Percentiles | `p95` on the `Latency` metric |
 | [Burn-rate pair](../../alerts.md#slo-burn-rate-alerts) | One metric alarm per window, joined with `AND` in a composite alarm |
 | [Low traffic](../../alerts.md#low-traffic) | `IF(req >= MIN_REQ, err / req)`: below the floor the point is dropped |
@@ -55,7 +55,7 @@ Key action `save_document`, critical-path call `PUT /documents/:id`, example SLO
 ```
 
 - **Metric filters** (namespace `App/API`, dimensions `key_action: $.key_action`, `route: $.route`): `Requests` on `{ $.route = "*" }`, value 1; `Errors` on `{ $.status >= 500 }`, value 1; `Latency` on `{ $.duration_ms = * }`, value `$.duration_ms`. EMF alternative: the same event with an `_aws` block naming these metrics and the dimension set `[["key_action", "route"]]`.
-- **SLI and panel**: `1 - err / req` with period 30 days for the SLI; a widget with `1 - err / req` and `req` (right axis) at 5 minutes for the [key action panel](../../dashboards.md#2-key-action-one-per-key-action).
+- **SLI and panel**: `1 - err / req` with period 30 days for the SLI; a widget with `1 - err / req` and `req` (right axis) at 5 minutes for the [key action panel](../../dashboards.md#dashboard-2-key-action-one-per-key-action).
 - **Thresholds**: `uv run src/calc.py burn --slo 99.9`, error rate = burn rate × (1 − 0.999): 1.440% (1h + 5m), 0.600% (6h + 30m), 0.100% (3d + 6h).
 
 - **Alarms**: one per window, each a math alarm on `Sum` of `Requests` (`req`) and `Errors` (`err`):

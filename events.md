@@ -88,7 +88,7 @@ Field names follow [OpenTelemetry semantic conventions](https://opentelemetry.io
 
 - **`main: true`** marks the one event per request that carries the full context (Morrell calls it the "main" event). Other events or spans for the same request share its `trace_id`.
 - **`trace_id` / `span_id`** tie this event to the other services the request touched (see [Trade-offs](#trade-offs)).
-- **`key_action`** names the key action the request serves ([kpis.md](kpis.md#1-map-it)), the same value as the metrics' `key_action` tag ([dashboards.md](dashboards.md#tagging-and-cardinality)), so events and metrics group the same way.
+- **`key_action`** names the key action the request serves ([kpis.md](kpis.md#map-it)), the same value as the metrics' `key_action` tag ([dashboards.md](dashboards.md#tagging-and-cardinality)), so events and metrics group the same way.
 - **`duration_ms`** is the whole request. The `*.duration_ms` fields break it down.
 - **`error` and `error.expected`** are on every event, `false` when nothing went wrong, so a filter like `error.expected = false` drops none.
 

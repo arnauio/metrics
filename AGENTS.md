@@ -15,7 +15,7 @@ Tool-agnostic guides for observability work: choosing KPIs, designing dashboards
 | Alert on traffic, capacity, rare events | [alerts.md: Threshold patterns](alerts.md#threshold-patterns-by-metric-type) | Journeys (advanced): [flows.md: Journey alerts](flows.md#journey-alerts), control limits from observed σ, not burn rates | 4–8 weeks of history at the alert's window; load-test limits for capacity |
 | Alert at low traffic | [alerts.md: Low traffic](alerts.md#low-traffic) | Check false alarms with `calc.py poisson` | Requests per window at the quietest hours; baseline error rate |
 | Is this rate different from normal? | [analysis.md: Formulas](analysis.md#formulas), [Sampling noise vs real variation](analysis.md#sampling-noise-vs-real-variation), [kpis.md: What counts as an error](kpis.md#what-counts-as-an-error) | Known normal rate: `calc.py wilson <x> <n> --baseline <rate>`. Two measured periods: `calc.py ztest`. Then compare with normal variation | Which statuses were counted; the baseline's own sample size and how much it varies between comparable windows |
-| Did an API regression or deploy move a KPI? | [analysis.md: Attribution recipe](analysis.md#did-it-move-the-kpi-an-attribution-recipe), [kpis.md: Estimate the effect](kpis.md#2-estimate-the-effect-on-the-key-action) | Place the call in the tree, baseline like with like, control segment, confounders, size with an interval | Deploy and flag timeline; an unaffected segment (region, client version) |
+| Did an API regression or deploy move a KPI? | [analysis.md: Attribution recipe](analysis.md#did-it-move-the-kpi-an-attribution-recipe), [kpis.md: Estimate the effect](kpis.md#estimate-the-effect-on-the-key-action) | Place the call in the tree, baseline like with like, control segment, confounders, size with an interval | Deploy and flag timeline; an unaffected segment (region, client version) |
 | Incident triage, runbooks | [incidents.md](incidents.md) | Scope → what changed → mitigate → locate → size; one runbook per paging alert | Start time, affected key actions or segments, recent changes |
 | Post-incident review | [incidents.md: Post-incident review](incidents.md#post-incident-review) | Fill in [templates/post-incident.md](templates/post-incident.md); size impact with `calc.py wilson --baseline` | Incident log, alert history, attempts and failures during the incident and a baseline |
 | Choose a window size for step ratios (journeys) | [flows.md Part 5](flows.md#part-5-window-sizing) | `calc.py spillover --gap <avg gap> --window <W>` | Average time between steps and for the whole journey |
@@ -51,7 +51,7 @@ uv run src/calc.py samples --p 0.01 --e 0.005   # requests needed to measure a r
 uv run src/calc.py poisson --expected 0.6 --k 5 # chance of k+ events when 0.6 are expected
 uv run src/calc.py spillover --gap 1 --window 5 # share of step counts spilling across windows
 uv run src/plots.py                             # regenerate all plots
-uv run src/check.py                             # check docs: links, anchors, quoted numbers
+uv run src/check.py                             # check docs: links, anchors, headings, quoted numbers
 ```
 
 - [templates/kpi-map.yaml](templates/kpi-map.yaml): the structure to fill in when choosing KPIs and mapping key actions to API calls (journeys optional). It's the input a dashboard or hub needs.
@@ -71,7 +71,7 @@ uv run src/check.py                             # check docs: links, anchors, qu
 
 ## Editing this repo
 
-- **Headings are anchors.** Other docs and this router link to them. Renaming a heading means updating every link to it; `check.py` finds broken ones.
+- **Headings are anchors.** Other docs and this router link to them. Renaming a heading means updating every link to it; `check.py` finds broken ones. Start headings with a letter and use only letters, digits, spaces and `, : ' ? ( ) -`, so GitHub and GitBook give them the same anchor.
 - **Numbers come from code.** Every formula result in the docs should be reproducible with `calc.py` or a plot script. Captions quote what the scripts print.
 - **Plots are generated.** Change the script, run `uv run src/plots.py`, and commit the images. Plots are seeded; reruns must be byte-identical.
 - **Keep the references generic.** System-specific material goes under `reference/<tool>/`, on the headings in [tools.md](tools.md#write-the-page), with the date the vendor docs were checked.

@@ -37,7 +37,7 @@ Don't page from Amplitude. Page on the key action from client RUM or edge counts
 | Latency percentiles | `PERCENTILE(A, 0.95)` grouped by an integer `duration_ms` |
 | [Burn-rate pair](../../alerts.md#slo-burn-rate-alerts) | Ticket level on a chart only: `ROLLWIN` over 72 and 6 hours |
 | Last week's baseline | Period-over-period: Previous week |
-| [Change markers](../../dashboards.md#5-changes-and-incidents) | Releases from the `Version` user property; annotations per chart |
+| [Change markers](../../dashboards.md#dashboard-5-changes-and-incidents) | Releases from the `Version` user property; annotations per chart |
 | Exploring by any field | Group by or filter on any event or user property |
 | [Business KPI](../../kpis.md#level-1-business-kpis) | Funnel, Retention and Event Segmentation charts; report, don't alert |
 
@@ -52,7 +52,7 @@ Don't page from Amplitude. Page on the key action from client RUM or edge counts
 
 ## Worked example
 
-Key action "save a document" ([Map it](../../kpis.md#1-map-it)), one event per attempt ([events.md](../../events.md#the-wide-event-way-one-event)), emitted after the client's last retry:
+Key action "save a document" ([Map it](../../kpis.md#map-it)), one event per attempt ([events.md](../../events.md#the-wide-event-way-one-event)), emitted after the client's last retry:
 
 ```json
 {"event_type": "Save Document", "event_properties": {"key_action": "save_document", "outcome": "error", "error.type": "timeout", "http.response.status_code": null, "duration_ms": 8000, "retries": 2}}

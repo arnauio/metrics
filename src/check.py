@@ -1,4 +1,4 @@
-"""Check the docs: links and anchors resolve, and quoted numbers still match calc.py.
+"""Check the docs: links and anchors resolve, headings slug the same on GitBook, and quoted numbers still match calc.py.
 
   uv run src/check.py
 
@@ -43,6 +43,24 @@ def check_links() -> list:
 	return errors
 
 
+def check_headings() -> list:
+	"""Headings on GitBook pages must slug the same on GitHub and GitBook.
+
+	GitBook keeps a leading number and its dot (`id-1.-map-it`), turns `/` and
+	non-ASCII symbols into hyphens, and collapses repeats; GitHub drops them. Links
+	are written with GitHub slugs, so these headings break on the published site.
+	"""
+	pages = ["README.md"] + re.findall(r"\]\(([^)]+\.md)\)", (ROOT / "SUMMARY.md").read_text())
+	safe = re.compile(r"^[A-Za-z][A-Za-z0-9 ,:'?()\-]*$")
+	errors = []
+	for page in dict.fromkeys(pages):
+		text = re.sub(r"```.*?```", "", (ROOT / page).read_text(), flags=re.S)
+		for heading in re.findall(r"^#{2,6}\s+(.*?)\s*$", text, flags=re.M):
+			if not safe.match(heading) or "  " in heading or " - " in heading:
+				errors.append(f"{page}: heading {heading!r}: start with a letter; use only letters, digits, spaces and , : ' ? ( ) -")
+	return errors
+
+
 def check_numbers() -> list:
 	"""Recompute numbers the docs quote and check the docs still say them."""
 	pct = lambda value, digits: f"{value * 100:.{digits}f}%"
@@ -68,7 +86,7 @@ def check_numbers() -> list:
 
 if __name__ == "__main__":
 	failed = False
-	for name, check in [("links and anchors", check_links), ("doc numbers vs calc.py", check_numbers)]:
+	for name, check in [("links and anchors", check_links), ("headings slug the same on GitBook", check_headings), ("doc numbers vs calc.py", check_numbers)]:
 		errors = check()
 		print(f"{'FAIL' if errors else 'ok  '} {name}")
 		for error in errors:
