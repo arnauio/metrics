@@ -1,30 +1,41 @@
 # Journey metrics: flows, users, and requests
 
-How can request counters alone tell whether a multi-step journey, such as a login, works right now? This advanced last chapter works journey metrics out in depth: counters, windows, 21 plots and an OAuth2 example. Read chapters 1–5 first; they hold the general rules: journeys in the KPI tree ([kpis.md](kpis.md#level-2-journey-kpis)), noise and baselines ([analysis.md](analysis.md#sampling-noise-vs-real-variation)), and thresholds ([alerts.md](alerts.md#threshold-patterns-by-metric-type)).
+Chapters 1–5 measure each key action call by call: the API calls on its critical path, as the user sees them. When a key action is a multi-step flow, such as a login with an emailed one-time code, every per-call SLI can stay green while the flow breaks. This advanced last chapter measures the whole flow, a **journey**, from request counters alone: counters, windows, plots, an OAuth2 example, and the dashboards and alerts to run it. Read chapters 1–5 first; they hold the general rules: key actions in the KPI tree ([kpis.md](kpis.md#the-kpi-tree)), noise and baselines ([analysis.md](analysis.md#sampling-noise-vs-real-variation)), and thresholds ([alerts.md](alerts.md#threshold-patterns-by-metric-type)).
 
 ## Rules
 
-1. **Count requests per step per window, not users**, because aggregate counters are cheap, low-cardinality, and work with any metrics backend ([Why journey metrics](#why-journey-metrics)).
-2. **Decide which requests count at each step, and count only successes at the final step**, because a failed final request would otherwise count as a completed journey ([§2](#2-what-we-count-requests)).
-3. **Make the window 5–10× the average gap between steps, and 5–10× the whole journey for $$C(t)$$**, because a smaller window makes the ratios noisy and misleading when traffic changes ([Part 5](#part-5-window-sizing)).
-4. **Alert on $$C(t)$$, debug with $$T_i(t)$$**, because any broken step lowers $$C(t)$$, and the $$T_i(t)$$ that dropped points at it ([§4](#4-from-flows-to-metrics)).
-5. **Set the SLO from the observed baseline, not a round number**, because three steps at 90% already give 73% ([§4.1](#41-what-these-metrics-tell-you)).
-6. **Set limits from observed variation, not from volume alone**, because more traffic shrinks sampling noise but not real variation ([Part 3](#part-3-real-world-variabilityjitter)).
-7. **Keep control limits fixed from a known-good period**, because limits recomputed from recent data absorb an ongoing failure ([Scenario 2](#scenario-2-system-failure-with-seasonal-traffic--t2-drops)).
-8. **Use events or funnels for long async steps, very low traffic, or per-user questions**, because windows would have to be huge and counters have no user IDs ([When this approach fits](#when-this-approach-fits)).
+1. **Choose 3–5 short journeys, from the key actions that take several steps**, because each needs its own counters, window and alert, and a long journey needs a long, slow window ([Choosing journeys](#choosing-journeys)).
+2. **One flow per branch**: tag each major branch (`flow=login_password`, `flow=login_sso`) as its own mostly sequential journey, because mixed branches make the step counts incomparable ([Non-linear flows](#advanced-notes-optional)).
+3. **Count requests per step per window, not users**, because aggregate counters are cheap, low-cardinality, and work with any metrics backend ([Why journey metrics](#why-journey-metrics)).
+4. **Count each step once per attempt, and only successes at the final step**, because repeats can push success above 100%, and a failed final request would count as a completed journey ([What we count](#what-we-count-requests)).
+5. **Make the window 5–10× the average step gap for each step transition $$T_i(t)$$, and the whole journey for the journey success rate $$C(t)$$**, because a smaller window makes the ratios noisy and misleading when traffic changes ([Part 5](#part-5-window-sizing)).
+6. **Alert on $$C(t)$$, debug with $$T_i(t)$$**, because any broken step lowers $$C(t)$$, and the $$T_i(t)$$ that dropped points at it ([From flows to metrics](#from-flows-to-metrics)).
+7. **Page on $$C(t)$$ with control limits from its observed σ, not burn rates**, because abandonment makes a journey's error budget too large for burn rates, and volume alone understates its variation ([Journey alerts](#journey-alerts), [Part 3](#part-3-real-world-variability-jitter)).
+8. **Fixed, not rolling, limits**: set them from a known-good period and update them deliberately, because rolling limits absorb a failure and the alert clears itself ([Journey alerts](#journey-alerts), [Scenario 2](#scenario-2-system-failure-with-seasonal-traffic-t2-drops)).
+9. **Set the SLO from the observed baseline, not a round number**, because three steps at 90% already give 73% ([What these metrics tell you](#what-these-metrics-tell-you)).
+10. **Use event-based tracking or product-analytics funnels for long async steps, very low traffic, or per-user questions**, because windows would have to be huge and counters have no user IDs ([When this approach fits](#when-this-approach-fits)).
 
 ## Why journey metrics
 
-Per-endpoint SLIs can all be green while the journey is broken. In the [OAuth2 example](#real-world-example-oauth2-device-authorization-grant), when fewer verification page loads end in an authorization (85% → 70%), every endpoint still returns HTTP 200, but end-to-end conversion drops from 78% to 65%. Broken verification URLs, confusing UX, or timing problems show up only in the flow.
+Per-endpoint SLIs can all be green while the journey is broken. In the [OAuth2 example](#real-world-example-oauth2-device-authorization-grant), when fewer verification page loads end in an authorization (85% → 70%), every endpoint still returns HTTP 200, but journey success drops from 78% to 65%. Broken verification URLs, confusing UX, or timing problems show up only in the flow.
 
 Funnel tools suit product analytics. For SLOs and alerts we found them harder: they need user tracking and custom events, and can get expensive.
 
 This approach uses only aggregate request counts:
 - Count requests per step per window (no user IDs)
 - Compute ratios between steps
-- Monitor them with control charts
+- Monitor them with control charts: one value per window, plotted against control limits set from its normal variation ([kpis.md: Glossary](kpis.md#glossary))
 
-## 1. The journey: user and server
+## Choosing journeys
+
+A **journey** is ordered user steps ending in a visible success: sign up, log in, load the app, edit and save, publish, view a page, search, pay. Each step is backed by one or more API calls. Tagged `flow` in metrics.
+
+1. Start from each business KPI's key action ([kpis.md](kpis.md#level-1-business-kpis)); when it takes several steps, list the journeys a user must complete to reach it.
+2. Rank by traffic × business value. Login and "load the main screen" usually come first, because every other journey depends on them.
+3. Start with 3–5, and map each step to its calls, marking the critical path ([Map it](kpis.md#1-map-it)).
+4. Keep each journey short: journey success needs a window several times the journey's duration ([Part 5](#part-5-window-sizing)), so split a long editing session into short journeys (open → editable; save → saved) and alert on those.
+
+## The journey: user and server
 
 Take a multi-step login flow:
 
@@ -44,7 +55,7 @@ At each step, the user can:
 - retry
 - wait
 
-A long wait and a stop look the same to the metrics until the user comes back ([§3.1](#31-user-behavior-abandonment-and-retry)).
+A long wait and a stop look the same to the metrics until the user comes back ([User behavior](#user-behavior-abandonment-and-retry)).
 
 On the server, each request ends in one of these buckets:
 - **continue (2xx)**: move the user to the next step.
@@ -52,7 +63,7 @@ On the server, each request ends in one of these buckets:
 - **fix or stop (most other 4xx: 400, 401, 403, …)**: the request itself was wrong, for example a mistyped OTP. The user either corrects it and retries, or gives up.
 - **stop (other 5xx)**: a server-side failure. The journey usually ends here, unless the user starts over.
 
-## 2. What we count: requests
+## What we count: requests
 
 We measure **requests per step** per window, not per-user state.
 
@@ -61,10 +72,10 @@ We measure **requests per step** per window, not per-user state.
 
 ```mermaid
 flowchart LR
-    subgraph User_journey
+    subgraph UJ[User journey]
         SU[sign in] --> SE[email] --> SO[OTP] --> SA[auth token]
     end
-    subgraph Request_counters
+    subgraph RC[Request counters]
         RS[/POST /sign-in/]
         RE[/POST /email/]
         RO[/POST /otp/]
@@ -80,7 +91,9 @@ Decide up front which requests count at each step, and keep it consistent:
 
 Either way, the final step counts only successes, or a failed `/auth` request would count as a completed journey.
 
-## 3. Time and windows
+**Count each step once per attempt.** Autosave sends many `PUT`s per document open; clients poll and retry. Counted per request, these inflate the step's count and can push journey success above 100%. Count a once-per-attempt signal instead: the first successful save per edit session, or a "saved" event. The [OAuth2 example](#real-world-example-oauth2-device-authorization-grant) leaves pending polls out of its token step for the same reason.
+
+## Time and windows
 
 In production there are many requests at once, from many users. To make them measurable and alertable:
 - pick a window size (for example 1, 5, or 15 minutes)
@@ -103,9 +116,9 @@ flowchart LR
 
 On average the split doesn't bias the ratios: in steady traffic, journeys leaving a window are replaced by journeys arriving from the previous one. But the ratios get **noisier**, and they **mislead when traffic changes**. When sign-ins ramp up, the OTP step still sees the traffic of a few seconds ago, so the ratio reads low; when traffic falls, it reads high, sometimes above 100%. The window should be much bigger than the time between steps ([Part 5](#part-5-window-sizing)).
 
-Volume matters too: the same window bounces at 100 requests and is smooth at 10,000, because sampling noise shrinks as volume grows ([Part 2](#part-2-volume-matterssampling-noise-vs-signal)). Real variation doesn't ([Part 3](#part-3-real-world-variabilityjitter)).
+Volume matters too: the same window bounces at 100 requests and is smooth at 10,000, because sampling noise shrinks as volume grows ([Part 2](#part-2-volume-matters-sampling-noise-vs-signal)). Real variation doesn't ([Part 3](#part-3-real-world-variability-jitter)).
 
-### 3.1 User behavior: abandonment and retry
+### User behavior: abandonment and retry
 
 Real users don't follow a straight path. Common patterns and their effect:
 
@@ -113,7 +126,7 @@ Real users don't follow a straight path. Common patterns and their effect:
 - User gets to step 2, gets distracted, never continues.
 - Metrics: request counted at step 2, but never at step 3.
 - Effect: lowers the step 2→3 transition ratio.
-- That's correct: abandonment should show up as lower conversion.
+- That's correct: abandonment should show up as lower journey success.
 
 **Long wait (user comes back after the window closes)**:
 - In the window where they stopped, the user looks like an abandonment.
@@ -133,9 +146,9 @@ Real users don't follow a straight path. Common patterns and their effect:
 
 So the metric is **the fraction of requests in a window that progress to the next step**, retries included. It doesn't track per-user success over unbounded time. That keeps it simple and cheap, and retry storms and other operational issues show up in it. It answers "is the login flow healthy right now?", not "did user X eventually succeed?". For per-user success over days or weeks, use funnel or event analytics.
 
-## 4. From flows to metrics
+## From flows to metrics
 
-Once we have windows, for every window $$t$$:
+Notation, for every window $$t$$:
 
 - **Step** $$i$$: a state in the journey ("login form", "OTP page", "/authorize", etc.).
 - **Arrival** $$A_i(t)$$: number of requests entering step $$i$$ in window $$t$$.
@@ -150,48 +163,55 @@ For the login flow above, counting every request at each step and only successfu
 
 From these counts we build:
 
-- **Transition ratios**: what fraction of requests at step $$i$$ made it to step $$i+1$$:
-  $$T_i(t) = \frac{A_{i+1}(t)}{A_i(t)}.$$
-- **End-to-end conversion** ([kpis.md](kpis.md#level-2-journey-kpis) calls it the journey success rate): what fraction of starting requests reached success:
-  $$C(t) = \frac{A_{S}(t)}{A_1(t)} = \prod_{i=1}^{S-1} T_i(t).$$
+**Transition ratio** $$T_i(t)$$: what fraction of requests at step $$i$$ made it to step $$i+1$$:
+
+$$T_i(t) = \frac{A_{i+1}(t)}{A_i(t)}.$$
+
+**Journey success rate** $$C(t)$$, or journey success: what fraction of starting requests reached success:
+
+$$C(t) = \frac{A_{S}(t)}{A_1(t)} = \prod_{i=1}^{S-1} T_i(t).$$
+
+[kpis.md](kpis.md#level-1-business-kpis) uses *conversion* for the business KPI (free → paid); this chapter says journey success for $$C(t)$$.
 
 We count requests, not unique users, so retries are part of the signal. The ratios don't depend on volume, but their noise shrinks as traffic grows. Each window counts whatever arrives in it, so a $$T_i(t)$$ can occasionally exceed 1, for example when traffic drops while the next step still receives journeys that started earlier ([Part 5](#part-5-window-sizing)).
 
-### 4.1 What these metrics tell you
+The journey KPIs:
+
+| KPI | Measure | Answers |
+|---|---|---|
+| Journey success rate | $$C(t)$$ | "Does the journey work right now?" |
+| Step transition | $$T_i(t)$$ | "Which step broke?" |
+| Journey volume | $$A_1(t)$$ | "Can users start?" A drop = users can't reach step 1, or demand fell |
+| Journey latency | First step to success, p75 and p95, from RUM or traces | "Is it slow enough that people give up?" |
+| Journey SLI | $$C$$ over 30 days, volume-weighted ([definition](#what-these-metrics-tell-you)) | SLO reporting, error budget |
+
+### What these metrics tell you
 
 **Per-step transition ratio $$T_i(t)$$**:
 - "Of the requests that reached step $$i$$, what % made it to step $$i+1$$?"
 - In our experience, healthy auth flows often see 85–95% per step (some abandonment and retries); your baseline depends on your flow.
 - A drop below your baseline points at step $$i$$, or at something between $$i$$ and $$i+1$$.
 
-**End-to-end conversion $$C(t)$$**:
+**Journey success rate $$C(t)$$**:
 - "Of all requests that started the flow, what % completed it?"
 - It's the product of all transition ratios, so any failing step lowers it.
+- **Errors multiply** ($$C = \prod T_i$$): a critical-path call failing for a fraction $$e$$ of requests turns $$T_i$$ into about $$T_i(1-e)$$ and $$C$$ into about $$C(1-e)$$, both higher if the client retries. Example: $$C = 0.80$$, $$e = 5\%$$ → $$C = 0.76$$, a 4-point drop.
 
-**SLI and SLO**: $$C(t)$$ is the measurement. Over a longer period, the **flow SLI** is total successes over total starts, $$\sum A_S / \sum A_1$$ ([SLIs, SLOs, and cost](#advanced-notes-optional)). The **SLO** is the target you set on top of it, either:
+![Journey success C vs the error rate of one critical-path call, with and without a client retry](images/kpis/errors_multiply.png)
+
+One client retry (failing only if both tries fail, $$e^2$$) keeps $$C$$ at 0.798, but only if the retry fails independently of the first try. During real incidents failures are correlated, so retries help much less.
+
+**Journey SLI and SLO**: $$C(t)$$ is the measurement per window. Over a period $$P$$, the **journey SLI** is the volume-weighted mean of $$C(t)$$, which is total successes over total starts:
+
+$$\text{SLI}_\text{journey}(P) = \frac{\sum_t A_1(t)\,C(t)}{\sum_t A_1(t)} = \frac{\sum_t A_S(t)}{\sum_t A_1(t)}$$
+
+Under the assumptions above, it approximates the fraction of attempts that eventually succeed. The **SLO** is the target you set on top of it, either:
 - volume-weighted: "SLI ≥ 75% over 30 days", or
 - window-based: "99% of 5-minute windows have C(t) > 70%".
 
 Set it from the observed baseline: three steps at 90% each already give 73%, so a 70% target would leave almost no headroom.
 
-### 4.2 Operational use
-
-With $$C(t)$$ for each window:
-
-1. **Dashboard**: plot $$C(t)$$ over time with control limits ([Part 2](#part-2-volume-matterssampling-noise-vs-signal)).
-2. **Alert**: fire if $$C(t)$$ drops below a threshold for N consecutive windows.
-3. **Debug**: check which $$T_i(t)$$ dropped to find the broken step.
-4. **SLO**: track the SLI against its target over a month.
-
-Example alert rule (pseudo-config):
-
-```text
-alert: AuthFlowDegraded
-when:  auth_flow_conversion < 0.70 for 2 consecutive 5-minute windows
-# healthy baseline for this flow ≈ 0.85
-```
-
-A fixed threshold is the simplest start. Control limits from a healthy baseline fit the threshold to your actual noise; [alerts.md](alerts.md#threshold-patterns-by-metric-type) shows how to set them for journey conversion.
+Dashboards and alerts on these metrics: [Operating journey metrics](#operating-journey-metrics).
 
 ---
 
@@ -199,25 +219,25 @@ A fixed threshold is the simplest start. Control limits from a healthy baseline 
 
 Basic concepts first, then how volume, jitter and failures affect the signal.
 
-Parts 1–4 use a generic flow, not the login flow from §4: four steps followed by a success step, so $$S = 5$$.
+Parts 1–4 use a generic flow, not the login flow above: four steps followed by a success step, so $$S = 5$$.
 
 > Step 1 → Step 2 → Step 3 → Step 4 → Success
 
-$$C(t) = A_5(t)/A_1(t) = T_1(t)\cdot T_2(t)\cdot T_3(t)\cdot T_4(t)$$, with 90% success on the first three transitions ($$T_1 = T_2 = T_3 = 0.9$$) and $$T_4 = 1.0$$, giving $$0.9^3 ≈ 73\%$$ end-to-end conversion.
+$$C(t) = A_5(t)/A_1(t) = T_1(t)\cdot T_2(t)\cdot T_3(t)\cdot T_4(t)$$, with 90% success on the first three transitions ($$T_1 = T_2 = T_3 = 0.9$$) and $$T_4 = 1.0$$, giving $$0.9^3 \approx 73\%$$ journey success.
 
-[src/flows_plots.py](https://github.com/arnauio/metrics/blob/main/src/flows_plots.py) generates the plots ([how to regenerate them](README.md#plots-and-calculator)).
+[src/flows_plots.py](https://github.com/arnauio/metrics/blob/main/src/flows_plots.py) generates the plots in Parts 1–5 and the OAuth2 scenarios; [src/kpis_plots.py](https://github.com/arnauio/metrics/blob/main/src/kpis_plots.py) generates the errors-multiply plot above ([how to regenerate them](README.md#plots-and-calculator)).
 
-### Part 1: Basic concepts—what are we measuring?
+### Part 1: Basic concepts, what are we measuring?
 
-The building blocks: arrivals, transitions and conversion.
+The building blocks: arrivals, transitions and journey success.
 
-#### 1.1 Arrivals per step – healthy flow
+#### 1.1 Arrivals per step, healthy flow
 
 ![Arrivals per step – normal](images/plot1.png)
 
 1,000 requests start at Step 1. With 90% success per step, the counts fall off gradually: Step 1 → 1,000, Step 2 → 900, Step 3 → 810, Step 4 → 729, Step 5 (success) → 729.
 
-#### 1.2 Arrivals per step – broken step
+#### 1.2 Arrivals per step, broken step
 
 ![Arrivals per step – T2 drops to 0.2](images/plot2.png)
 
@@ -235,17 +255,17 @@ Side by side, the broken step is obvious. When $$C(t)$$ drops, this is the quest
 
 Per step: every transition looks healthy except $$T_2$$, where the flow broke.
 
-#### 1.5 End-to-end conversion
+#### 1.5 Journey success rate
 
-![End-to-end conversion – two windows](images/plot5.png)
+![Journey success rate – two windows](images/plot5.png)
 
-The number you'd track as the flow SLI and alert on: 73% healthy → 16% broken.
+The number you'd alert on, and the basis of the journey SLI: 73% healthy → 16% broken.
 
 ---
 
-### Part 2: Volume matters—sampling noise vs. signal
+### Part 2: Volume matters, sampling noise vs signal
 
-All control limits in Parts 2–4 are individuals-chart limits: mean ± 3σ, with σ estimated from the average moving range of the baseline windows.
+An **individuals chart** plots one value per window, here $$C(t)$$, against fixed limits from a healthy baseline. All control limits in Parts 2–4 are individuals-chart limits: mean ± 3σ, with σ estimated from the average moving range of the baseline windows.
 
 #### 2.1 Low volume: 100 requests/window
 
@@ -269,7 +289,7 @@ Sampling noise shrinks with $$1/\sqrt{n}$$: 100× the traffic gives 10× tighter
 
 ---
 
-### Part 3: Real-world variability—jitter
+### Part 3: Real-world variability (jitter)
 
 Production systems have real variation: performance fluctuations, time-of-day effects, load changes. We model this as **jitter**: in each window, each $$T_i$$ is drawn uniformly from $$T_i ± 0.05$$ (5 percentage points). $$T_4 = 1.0$$ can't go higher, so it stays fixed.
 
@@ -281,7 +301,7 @@ Does more volume remove it?
 
 With 100 requests per window and jitter on each step, $$C(t)$$ varies more: σ goes from 0.04 (Part 2.1) to about 0.07. The mean stays around 73%, but single windows range widely, and the limits must be wide to cover this real variation.
 
-#### 3.2 High volume with jitter—same problem persists
+#### 3.2 High volume with jitter, same problem persists
 
 ![C(t) with control limits – base, 1M requests, jitter 0.05](images/plot10.png)
 
@@ -300,7 +320,7 @@ Volume reduces sampling noise, not real variation: a system that fluctuates by a
 
 ![C(t) with moving average control limits](images/plot15.png)
 
-Same scenario as 3.2, alerting on a 5-window moving average (blue) instead of the raw values (gray). The average of $$w$$ windows has $$\sqrt{w}$$ times less variation, so its limits are $$\sqrt{5} ≈ 2.2×$$ tighter: about ±0.055 instead of ±0.12. A smaller sustained drop is now enough to cross them.
+Same scenario as 3.2, alerting on a 5-window moving average (blue) instead of the raw values (gray). The average of $$w$$ windows has $$\sqrt{w}$$ times less variation, so its limits are $$\sqrt{5} \approx 2.2\times$$ tighter: about ±0.055 instead of ±0.12. A smaller sustained drop is now enough to cross them.
 
 Compute σ from the **raw** values and divide by $$\sqrt{w}$$. Don't compute it from the moving ranges of the average itself: neighbouring averages share 4 of their 5 inputs, so they barely move from one window to the next, and the limits come out far too tight and fire on healthy traffic.
 
@@ -330,13 +350,13 @@ Failures are detectable at any volume, but high volume makes detection cleaner.
 
 ### Part 5: Window sizing
 
-The most common mistake is a window too small for the flow.
+The most common mistake is a window too small for the flow. [5.3](#53-how-to-choose-window-size) gives the rule for the window $$W$$. For your own gaps: `uv run src/calc.py spillover --gap <avg gap> --window <W>`.
 
 #### 5.1 Why window size matters
 
 Each window counts whatever arrives in it. A request that enters step $$i$$ just before a window boundary reaches step $$i+1$$ in the next window. On average, the share of $$A_{i+1}(t)$$ that started in an earlier window is about
 
-$$\text{spillover} ≈ \frac{\text{average gap between step } i \text{ and step } i+1}{W}$$
+$$\text{spillover} \approx \frac{\text{average gap between step } i \text{ and step } i+1}{W}$$
 
 where $$W$$ is the window length. With a 1-minute average gap, that's about 20% for a 5-minute window, and about 7% for 15 minutes.
 
@@ -386,7 +406,7 @@ Per step:
 - Step 3→4: device polls and gets the token (a few seconds, one polling interval)
 - Step 4→5: device uses the token for an API call (seconds)
 
-The whole journey averages about 1.5–2 minutes. Using the 5–10× rule:
+The whole journey averages about 1.5–2 minutes. Using the rule:
 - 1-minute window: too small. With the window as short as the gap, the formula above breaks down; for this gap distribution, about 60% of step-2 requests started in an earlier window.
 - 5-minute window: fine for $$T_2$$–$$T_4$$, which have short gaps. Borderline for $$T_1$$ (about 20% spillover) and $$C(t)$$ (30–40%), which shows up as noise and as errors during traffic ramps.
 - 10–15-minute window: good for $$T_1$$ and $$C(t)$$. This is what the example below uses.
@@ -397,7 +417,7 @@ You can also use different windows per ratio: short windows for fast inner steps
 
 Plot $$T_i(t)$$ at two window sizes (say 5 and 15 minutes) over a day with a traffic ramp. If the smaller window shows dips during ramp-ups, bumps during ramp-downs, or values above 1 that the larger one doesn't, the smaller window is too small.
 
-For flows with long or variable gaps (email verification over hours, human review, async jobs), a window long enough to contain the journey makes a slow, laggy signal. Use event-based funnels instead ([events.md](events.md)).
+For flows with long or variable gaps (email verification over hours, human review, async jobs), a window long enough to contain the journey makes a slow, laggy signal ([other approaches](#when-this-approach-fits)).
 
 ---
 
@@ -437,7 +457,8 @@ Transitions:
 - $$T_3(t) = A_4(t)/A_3(t)$$: token retrievals per authorization grant
 - $$T_4(t) = A_5(t)/A_4(t)$$: successful API calls per token retrieval
 
-End-to-end conversion:
+Journey success rate:
+
 $$C(t) = \frac{A_5(t)}{A_1(t)} = T_1(t) \cdot T_2(t) \cdot T_3(t) \cdot T_4(t)$$
 
 A user who restarts the flow generates another device auth request, so retries show up in $$A_1(t)$$ and lower $$C(t)$$.
@@ -458,7 +479,7 @@ If $$T_2$$ drops from 0.85 to 0.70, every endpoint still returns HTTP 200, but $
 
 Each scenario shows how one kind of change affects the metrics. Each window has 10k device auth requests unless the traffic follows a daily cycle, and each $$T_i$$ jitters by ±0.02 (narrowed near 1, so $$T_4 = 0.99$$ only jitters by ±0.01). Degradations start at window 21, after 20 healthy windows.
 - Scenarios 1, 4 and 5 alert on a 5-window moving average, with limits computed as in [Part 3.4](#34-moving-average-control-limits).
-- Scenarios 2 and 3 have a daily traffic cycle and use **volume-aware limits**: a p-chart, whose limits depend on each window's volume, plus the real variation measured in the healthy baseline.
+- Scenarios 2 and 3 have a daily traffic cycle and use **volume-aware limits**: a **p-chart** (a control chart for a proportion, whose limits depend on each window's volume), plus the real variation measured in the healthy baseline.
 
 #### Scenario 0: Volume independence
 
@@ -466,31 +487,31 @@ Each scenario shows how one kind of change affects the metrics. Each window has 
 
 Traffic varies 20× (500→10k→500 req/window), yet $$C(t)$$ stays ~78%. Volume affects noise, not signal, which is why ratios work at any scale.
 
-#### Scenario 1: User behavior change — T1 drops
+#### Scenario 1: User behavior change, T1 drops
 
 ![OAuth2 - User behavior change](images/plot16.png)
 
 $$T_1$$ drops from 0.95 to 0.80 at window 21. Likely a UX issue (broken link, confusing instructions). The moving average crosses the lower limit in the first bad window and settles around 66%.
 
-#### Scenario 2: System failure with seasonal traffic — T2 drops
+#### Scenario 2: System failure with seasonal traffic, T2 drops
 
 ![OAuth2 - System failure with seasonal traffic](images/plot17.png)
 
-Daily traffic pattern with $$T_2$$ degrading at window 21. The limits are fixed from the healthy baseline, so every bad window stays below them. Limits recomputed from a rolling window would slowly absorb the failure and the alert would clear itself.
+Daily traffic pattern with $$T_2$$ degrading at window 21. The limits are fixed from the healthy baseline ([why](#journey-alerts)), so every bad window stays below them.
 
-#### Scenario 3: Seasonal pattern — healthy flow
+#### Scenario 3: Seasonal pattern, healthy flow
 
 ![OAuth2 - Seasonal volume](images/plot18.png)
 
 Daily cycle, healthy throughout. The limits widen at night (about ±0.08 at 500 requests/window) and tighten at peak (about ±0.06 at 10k). At peak (10k requests), sampling noise (σ ≈ 0.004) is small next to the real variation from the ±0.02 jitter per step (σ ≈ 0.02), so the jitter sets the width. At night (500 requests) the two are about equal, so the limits widen by only about a third. As in Part 3, past some volume more traffic stops tightening the limits.
 
-#### Scenario 4: Polling failure — T3 drops
+#### Scenario 4: Polling failure, T3 drops
 
 ![OAuth2 - Polling failure](images/plot19.png)
 
 $$T_3$$ drops from 0.98 to 0.85. Polling timeouts or rate limiting.
 
-#### Scenario 5: Token validation — T4 drops
+#### Scenario 5: Token validation, T4 drops
 
 ![OAuth2 - Token validation failure](images/plot20.png)
 
@@ -498,24 +519,81 @@ $$T_4$$ drops from 0.99 to 0.90. Tokens are issued but fail on API calls.
 
 ---
 
+## Operating journey metrics
+
+Dashboards, alerts and impact sizing for journeys, on top of the per-call ones in [dashboards.md](dashboards.md#the-dashboard-set) and [alerts.md](alerts.md#what-to-page-on).
+
+### Journey dashboard
+
+Add the counters to your [stack map](dashboards.md#map-to-your-stack):
+- **Journey counters**: a metrics backend or event pipeline, such as Prometheus, Cloud Monitoring, or wide events ([events.md](events.md)).
+
+In the [KPI overview](dashboards.md#1-kpi-overview):
+
+| Panel | What it shows | Chart |
+|---|---|---|
+| Journey success rate | $$C(t)$$ per journey, last 24 h, against its control limits | Small multiples, one per journey |
+| SLO status | Journey SLI over 30 days vs target; error budget remaining | Stat tiles, green/yellow/red |
+
+One dashboard per journey, between the KPI overview and the API calls. Drill-down: KPI tile → its journey → a step's calls → their dependencies.
+
+| Panel | What it shows | Chart |
+|---|---|---|
+| Funnel now vs last week | $$A_i$$ per step, current window and the same window a week ago | Grouped bars |
+| Journey success rate | $$C(t)$$ with control limits | Time series |
+| Step transitions | $$T_i(t)$$ per step, with limits | Small multiples |
+| Volume | $$A_1(t)$$ with last week's line | Time series |
+| Journey latency | p75, p95 from first step to success | Time series |
+| Failing calls per step | Top calls by error count on each step's critical path | Table |
+| Segments | $$C$$ by platform, client version, region, plan tier | Table or heatmap |
+
+Window size for the ratios follows the journey's timing ([Part 5](#part-5-window-sizing)).
+
+### Journey alerts
+
+- **Page on $$C(t)$$** of each key journey: it's a symptom users feel ([alerts.md](alerts.md#what-to-page-on)). Debug with $$T_i(t)$$: the one that dropped points at the broken step.
+- **Control limits from the observed σ** of healthy windows: alert below μ − 3σ, sustained over a few windows. Binomial σ (from volume alone) fires constantly ([why](analysis.md#sampling-noise-vs-real-variation)).
+- **Fixed, not rolling, limits**: compute them from a known-good period and update them deliberately as the system evolves. Limits recomputed from a rolling window slowly absorb a failure, and the alert clears itself ([Scenario 2](#scenario-2-system-failure-with-seasonal-traffic-t2-drops), [analysis.md](analysis.md#baselines-and-seasonality)).
+- **Window** sized to the whole journey ([Part 5](#part-5-window-sizing)).
+- **Not with burn rates.** [Burn-rate tiers](alerts.md#slo-burn-rate-alerts) assume a small error budget (targets of 99% and up). A journey's normal failures include abandonment (e.g. $$C \approx 0.92$$), so its budget is large and a 14.4× burn is impossible. Journeys still have an SLO (target from the baseline, failure fraction $$1 - C$$): track the [journey SLI](#what-these-metrics-tell-you) against it over a month for reporting, and alert with control limits.
+- **Journey volume** $$A_1(t)$$ is traffic: alert on drops from a [time-of-week baseline](alerts.md#traffic-volume).
+- **No baseline yet**: start with journey $$C$$ below 80% of its first week's average, and tune after 1–2 weeks ([alerts.md](alerts.md#if-you-have-no-baseline-yet)).
+
+Example alert rule (pseudo-config):
+
+```text
+alert: AuthJourneyDegraded
+when:  auth_journey_success < 0.875 for 15m
+# 0.875 = μ − 3σ, with μ 0.92 and σ 0.015 measured on healthy windows
+# of a known-good period; fixed, not recomputed on a rolling window
+```
+
+Control charts for $$C(t)$$ and $$T_i(t)$$:
+- Individuals chart: simple, works when volume per window is roughly stable.
+- p-chart: limits widen at low volume and tighten at high volume. On its own it assumes sampling noise is the only noise, so at high volume it fires on normal jitter. Add the real variation from a healthy baseline (Scenario 3, or a Laney p′ chart, a p-chart whose limits are widened by the window-to-window variation measured in the baseline).
+- Instead of control charts, you can use simple alert rules (for example static thresholds on $$C(t)$$) or your metrics backend's anomaly detection or forecasting, with the same $$T_i(t)$$ and $$C(t)$$ as inputs.
+
+### Sizing a regression
+
+Did an API regression move a journey? Apply the [attribution recipe](analysis.md#did-it-move-the-kpi-an-attribution-recipe) at the journey level:
+- **Place it**: the call is on the critical path of a step → check that step's $$T_i$$, then the journey's $$C$$, then the business KPI.
+- **Test it against real variation**: is the change in $$T_i$$ bigger than its usual week-over-week change in healthy weeks, or than a control segment's? A z-test alone covers sampling noise only. Mann-Whitney on journey latency.
+- **Confounders** include a traffic-mix shift: a bot wave lowers ratios without any bug ([Traffic mix](#advanced-notes-optional)).
+- **Size it**: extra failed or abandoned journeys ≈ $$A_1$$ per hour × drop in $$C$$ × duration, with its interval. Business impact = failed journeys × share that never comes back and succeeds.
+
+---
+
 ## Advanced notes (optional)
 
 Notes for rolling this out in production.
 
-**Control charts**
-- Individuals chart: simple, works when volume per window is roughly stable.
-- P‑chart: limits widen at low volume and tighten at high volume. On its own it assumes sampling noise is the only noise, so at high volume it fires on normal jitter. Add the real variation from a healthy baseline (Scenario 3, or a Laney p′ chart).
-- Keep limits fixed from a known-good period and update them occasionally as the system evolves ([analysis.md](analysis.md#baselines-and-seasonality)).
-- Instead of control charts, you can use simple alert rules (for example static SLO-style thresholds on $$C(t)$$) or your metrics backend's anomaly detection or forecasting, with the same $$T_i(t)$$ and $$C(t)$$ as inputs.
-
 **Non-linear flows**
 - In practice each major branch is its own mostly sequential flow, tagged `flow=<journey>_<method>` (for example `flow=login_password`, `flow=login_sso`, `flow=login_webauthn`).
-- Retries are extra noise in $$A_i(t)$$ and $$T_i(t)$$ ([§3.1](#31-user-behavior-abandonment-and-retry)). Split out first attempts vs retries only if you need to distinguish "hard failures" from "eventual success after many retries".
+- Retries are extra noise in $$A_i(t)$$ and $$T_i(t)$$ ([User behavior](#user-behavior-abandonment-and-retry)). Split out first attempts vs retries only if you need to distinguish "hard failures" from "eventual success after many retries".
 
 **SLIs, SLOs, and cost**
-- Typical stack: per-endpoint availability + latency **and** flow conversion $$C(t)$$ on top.
-- A practical flow SLI is the volume-weighted mean conversion over a period $$P$$: $$\text{SLI}_\text{flow}(P) = \frac{\sum_t A_1(t)\,C(t)}{\sum_t A_1(t)} = \frac{\sum_t A_S(t)}{\sum_t A_1(t)}$$. Under the assumptions above, this approximates the fraction of attempts that eventually succeed. SLO targets on it: [§4.1](#41-what-these-metrics-tell-you).
-- Per-step SLOs locate the broken component; end-to-end conversion SLOs say whether the journey works.
+- Typical stack: per-endpoint availability + latency **and** the journey success rate $$C(t)$$ on top, with the [journey SLI](#what-these-metrics-tell-you) over a period.
+- Per-step SLOs locate the broken component; journey SLOs say whether the journey works.
 - A small, controlled `flow` tag adds predictable metric cardinality and is usually cheap in managed backends ([dashboards.md](dashboards.md#tagging-and-cardinality)).
 
 **Traffic mix, bots, and abuse**
@@ -531,19 +609,19 @@ This builds on Google SRE's journey-based SLIs ([SRE Workbook](https://sre.googl
 
 **Good fit**:
 - **Steps are mostly sequential**: login → MFA → token → success.
-- **Step timing is bounded**: journeys take seconds to minutes, not hours, so the window can be 5–10× the journey ([Part 5](#part-5-window-sizing)).
+- **Step timing is bounded**: journeys take seconds to minutes, not hours, so a window sized to the whole journey stays short ([Part 5](#part-5-window-sizing)).
 - **Volume is moderate to high**: at least 100 requests per window, ideally 1,000+.
 - **You want operational SLIs**: "Is the login flow healthy right now?"
 - **Cost matters**: aggregate counters are cheaper than per-user events.
 
 **Other approaches are better**:
-- **Long async steps**, such as email verification that takes hours or days. Windows would need to be very large (1 day+), making detection slow. Use event-based tracking ([events.md](events.md)).
+- **Long async steps**, such as email verification that takes hours or days. Windows would need to be very large (1 day+), making detection slow. Use event-based tracking or product-analytics funnels.
 - **Very low traffic**, under ~100 requests per window. Sampling noise makes the ratios jump around. Use longer windows, or synthetic monitoring plus event tracking.
 - **Complex branching**, with lots of optional paths and loops. It can still work, but you need a separate flow for each major branch ([Non-linear flows](#advanced-notes-optional)).
-- **Per-user analysis**, such as "show me all users who failed step 2". This approach has no user IDs. Use tracing or event analytics ([events.md](events.md)).
+- **Per-user analysis**, such as "show me all users who failed step 2". This approach has no user IDs. Use tracing, wide events ([events.md](events.md)), or product analytics.
 - **Attribution across long time spans**, such as "of users who signed up last month, how many completed setup?". That's a funnel or cohort question, not an operational health question. Use product analytics tools.
 
-Journey Metrics is the cheap operational signal: SLIs, alerts, dashboards. In our experience, it works best next to tracing for debugging specific failures, product analytics for longer-term conversion and A/B tests, and synthetic checks for baseline health:
+Journey Metrics is the cheap operational signal: SLIs, alerts, dashboards. In our experience, it works best next to tracing for debugging specific failures, product analytics for longer-term funnels and A/B tests, and synthetic checks for baseline health:
 
 | Approach | How it works | What it is best at | Main tradeoffs |
 |---|---|---|---|
@@ -551,12 +629,12 @@ Journey Metrics is the cheap operational signal: SLIs, alerts, dashboards. In ou
 | Synthetic monitoring | Bots run scripted journeys | Smoke tests, external checks, third parties | Fake traffic, limited scenarios, no load info |
 | APM / distributed tracing | Per-request traces across services | Deep debugging of specific failures | High cardinality, sampling, complex queries |
 | High-cardinality observability ([events.md](events.md)) | Stores rich, high-cardinality events and fields | Ad-hoc "show me all requests where…" queries | Cost grows with cardinality and usage |
-| This **Journey Metrics** model | Aggregate request counters per step and time window | Cheap, simple flow SLIs and SLOs | Less flexible for arbitrary ad-hoc questions |
+| This **Journey Metrics** model | Aggregate request counters per step and time window | Cheap, simple journey SLIs and SLOs | Less flexible for arbitrary ad-hoc questions |
 
 **Beyond login flows**, the same counters work for any short, mostly sequential pipeline:
 - **API rate limiting and retry policies**: track end-to-end success including retries; detect when rate limits are too aggressive or retries mask degradation.
-- **Payment processing flows**: measure checkout-to-settlement conversion; catch revenue leaks where per-endpoint metrics show success but customers don't complete payment.
+- **Payment processing flows**: measure checkout-to-settlement success; catch revenue leaks where per-endpoint metrics show success but customers don't complete payment.
 - **CI/CD pipelines**: reveal the real deployment success rate. Five stages at 98% each give only 90% end-to-end.
 - **Data ingestion pipelines**: detect when data arrives but doesn't fully propagate through validation, transformation, and caching.
-- **Service mesh / distributed systems**: catch cross-service conversion drops that per-service SLIs miss due to cascading timeouts or retries.
+- **Service mesh / distributed systems**: catch cross-service success drops that per-service SLIs miss due to cascading timeouts or retries.
 - **Email delivery pipelines**: measure accepted → delivered, beyond "accepted by SMTP"; detect ISP blocking and spam filtering. This works when the stages complete within minutes, not when you're waiting on a human to open the email.

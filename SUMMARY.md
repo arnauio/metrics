@@ -4,12 +4,12 @@
 
 ## Guide
 
-* [1. KPIs: what to measure](kpis.md)
-* [2. Analysis: is this change real?](analysis.md)
-* [3. Dashboards: what to build](dashboards.md)
-* [4. Alerts: what to page on](alerts.md)
-* [5. Wide events](events.md)
-* [6. Journey metrics (advanced)](flows.md)
+* [KPIs: what to measure](kpis.md)
+* [Analysis: is this change real, and did it move the KPI?](analysis.md)
+* [Dashboards: what to build](dashboards.md)
+* [Alerts: what to page on, and how to set thresholds](alerts.md)
+* [Wide events: explaining what the metrics show](events.md)
+* [Journey metrics: flows, users, and requests](flows.md)
 
 ## Reference
 

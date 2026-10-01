@@ -1,5 +1,5 @@
-# KPI map: fill this in to choose KPIs and connect them to journeys, API calls and data sources.
-# Method: kpis.md (levels, journeys, critical path) and dashboards.md (map to your stack).
+# KPI map: fill this in to choose KPIs and connect them to key actions, API calls and data sources.
+# Method: kpis.md (levels, key actions, critical path) and dashboards.md (map to your stack).
 # Values below are examples showing the shape; replace every one. Mark unknowns as `unknown`
 # instead of guessing, and note where each value came from.
 
@@ -7,41 +7,99 @@ product: example-editor            # what this map covers
 as_of: 2026-01-01                  # when it was filled in
 sources_consulted: []              # e.g. [frontend repo, Cloudflare analytics, product analytics]
 
-# Level 1: 3–5 business KPIs, each tied to the journey whose success moves it.
+# Level 1: 3–5 business KPIs, each tied to the key action that moves it.
 business_kpis:
   - name: engagement_saves
     definition: successful saves per weekly active user
     numerator: successful saves in the week
     denominator: weekly active users
     window: weekly
-    key_action_journey: edit_and_save  # must match a journey id below
+    key_action: save_document        # must match a key action id below
     source: product analytics        # vantage point / system
     segments: [plan_tier, platform]  # bounded dimensions only
     baseline: unknown                # from observed data, not a round number
     owner: unknown
 
-# Level 2: journeys. Keep them short (seconds to a few minutes); split long sessions.
+# Key actions: what a user does for a KPI to move, measured through the API calls on its
+# critical path, as the user sees them (kpis.md#connecting-the-levels-how-an-api-call-affects-a-kpi).
+key_actions:
+  - id: open_document
+    description: open a document
+    success: GET returns 200 and the document renders
+    error_definition: 5xx, timeouts and network failures seen by the client (kpis.md#what-counts-as-an-error)
+    calls:
+      - request: GET /documents/:id
+        critical_path: true          # the key action can't complete without it
+      - request: GET /comments
+        critical_path: false         # slow or failing degrades the page, doesn't fail the key action
+    kpis:                            # which key action KPIs to track (dashboards.md#2-key-action-one-per-key-action)
+      success_rate: true
+      volume: true
+      latency_p75_p95: true
+    slo:
+      sli: successful attempts / attempts over 30 days
+      target: unknown                # from the baseline
+    alert: unknown                   # burn rate on the SLO (alerts.md#slo-burn-rate-alerts)
+  - id: save_document
+    description: save a document
+    success: save returns 200 and the document shows as saved
+    error_definition: 5xx, timeouts and network failures seen by the client; 409 conflicts tracked separately
+    calls:
+      - request: PUT /documents/:id
+        critical_path: true
+        user_waits: false            # background autosave: can't cause abandonment; watch failures
+    kpis:
+      success_rate: true
+      volume: true
+      latency_p75_p95: true
+    slo:
+      sli: successful attempts / attempts over 30 days
+      target: unknown                # from the baseline
+    alert: unknown
+
+# Level 2: API calls, as the user sees them. One entry per call referenced above.
+api_calls:
+  - request: GET /documents/:id
+    critical_path_of: [open_document] # key actions it can fail; [] if none
+    red_from: client                 # client | edge | server (prefer client or edge)
+    latency_percentiles: [p50, p95, p99]
+    slo:
+      availability_target: unknown   # e.g. 99.9 → `uv run src/calc.py burn --slo 99.9`
+      latency_threshold_ms: unknown  # SLI = share of requests faster than this
+  - request: GET /comments
+    critical_path_of: []             # degrades open_document, can't fail it
+    red_from: client
+    latency_percentiles: [p50, p95, p99]
+    slo: none                        # off every critical path: dashboard, no page
+  - request: PUT /documents/:id
+    critical_path_of: [save_document]
+    red_from: client
+    latency_percentiles: [p50, p95, p99]
+    slo:
+      availability_target: unknown
+      latency_threshold_ms: unknown
+
+# Level 3: resources behind the critical-path calls.
+resources:
+  - name: primary database
+    watch: [query latency p95 by query shape, connections vs max, rows read]
+    serves: [GET /documents/:id, PUT /documents/:id]
+
+# Optional, advanced: journeys, multi-step flows built from key actions, with step counters
+# A_i, transitions T_i and journey success C(t). Method in flows.md; leave as [] if you don't
+# track them. Keep them short (seconds to a few minutes); split long sessions.
 journeys:
   - id: edit_and_save
     flow_tag: edit_and_save          # value of the `flow` metric tag
     description: open a document, edit it, save
-    average_duration: unknown        # sets the window: 5–10× this for C(t) (analysis.md#windows)
+    average_duration: unknown        # sets the window: 5–10× this for C(t) (flows.md#part-5-window-sizing)
     success: save returns 200 and the document shows as saved
     counting: once per attempt       # e.g. first successful save per edit session, not every autosave
     steps:
-      - name: open_document
-        calls:
-          - request: GET /documents/:id
-            critical_path: true      # the step can't complete without it
-          - request: GET /comments
-            critical_path: false     # slow or failing degrades the page, doesn't break the journey
+      - key_action: open_document    # must match a key action id above
         average_gap_to_next: unknown # sets the window for this step's T_i
-      - name: save
-        calls:
-          - request: PUT /documents/:id
-            critical_path: true
-            user_waits: false        # background autosave: can't cause abandonment; watch failures
-    kpis:                            # which journey KPIs to track (kpis.md#level-2-journey-kpis)
+      - key_action: save_document
+    kpis:                            # which journey KPIs to track (flows.md)
       success_rate: true             # C(t) = A_S / A_1
       step_transitions: true         # T_i(t)
       volume: true                   # A_1(t)
@@ -49,23 +107,7 @@ journeys:
     slo:
       sli: sum(A_S) / sum(A_1) over 30 days
       target: unknown                # from the baseline
-    alert: control limits from observed σ of healthy windows (alerts.md#threshold-patterns-by-metric-type)
-
-# Level 3: API calls, as the user sees them. One entry per call referenced above.
-api_calls:
-  - request: PUT /documents/:id
-    error_definition: 5xx, timeouts and network failures seen by the client; 409 conflicts tracked separately
-    red_from: client                 # client | edge | server (prefer client or edge)
-    latency_percentiles: [p50, p95, p99]
-    slo:
-      availability_target: unknown   # e.g. 99.9 → `uv run src/calc.py burn --slo 99.9`
-      latency_threshold_ms: unknown  # SLI = share of requests faster than this
-
-# Level 4: resources behind the critical-path calls.
-resources:
-  - name: primary database
-    watch: [query latency p95 by query shape, connections vs max, rows read]
-    serves: [GET /documents/:id, PUT /documents/:id]
+    alert: control limits from observed σ of healthy windows (flows.md#journey-alerts)
 
 # Data sources: where each signal comes from (dashboards.md#map-to-your-stack).
 data_sources:
@@ -74,7 +116,7 @@ data_sources:
   server_traces_logs: unknown        # e.g. Google Cloud Trace and Logging
   database: unknown                  # e.g. PlanetScale Insights
   deploys_and_flags: unknown         # e.g. GitHub, Vercel deployments, flag audit log
-  journey_counters: unknown          # e.g. Prometheus, Cloud Monitoring, wide events
+  journey_counters: unknown          # only with journeys (flows.md); e.g. Prometheus, Cloud Monitoring, wide events
   business_kpis: unknown             # e.g. Amplitude, BigQuery
 
 open_questions: []                   # anything that needs the user's input

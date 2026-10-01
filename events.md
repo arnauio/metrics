@@ -1,4 +1,4 @@
-# Wide events guide
+# Wide events: explaining what the metrics show
 
 Metrics detect that something is wrong; wide events explain why. A wide event captures **all the context** about a unit of work (like an HTTP request) in a **single event**, rather than scattering it across log lines. Chapter 5; read [alerts.md](alerts.md) first. Next, [flows.md](flows.md), the advanced chapter on journey metrics.
 
@@ -41,6 +41,7 @@ Instead, emit **one event per request** when it finishes, carrying everything le
   "http.request.method": "POST",
   "http.route": "/api/login",
   "http.response.status_code": 200,
+  "key_action": "log_in",
 
   "service.name": "api-gateway",
   "service.version": "v2.4.1",
@@ -76,6 +77,7 @@ Field names follow [OpenTelemetry semantic conventions](https://opentelemetry.io
 
 - **`main: true`** marks the one event per request that carries the full context (Morrell calls it the "main" event). Other events or spans for the same request share its `trace_id`.
 - **`trace_id` / `span_id`** tie this event to the other services the request touched (see [Trade-offs](#trade-offs)).
+- **`key_action`** names the key action the request serves ([kpis.md](kpis.md#1-map-it)), the same value as the metrics' `key_action` tag ([dashboards.md](dashboards.md#tagging-and-cardinality)), so events and metrics group the same way.
 - **`duration_ms`** is the whole request. The `*.duration_ms` fields break it down.
 - **`error` and `error.expected`** are on every event, `false` when nothing went wrong, so a filter like `error.expected = false` drops none.
 
@@ -116,6 +118,7 @@ offset   duration  step
   "http.request.method": "POST",
   "http.route": "/api/login",
   "http.response.status_code": 429,
+  "key_action": "log_in",
   "client.address": "203.0.113.42",
   "user_agent.original": "python-requests/2.31.0",
 
@@ -181,7 +184,7 @@ Wide events aren't free:
   - *Head sampling* decides when the request starts. It's cheap, but it drops rare errors along with everything else.
   - *Tail sampling* decides after the request ends: keep all errors and slow requests, sample the rest. It needs a buffer, for example the OpenTelemetry Collector's tail sampling processor, and all spans of a trace must reach the same collector instance, so put a trace-ID-aware load-balancing exporter in front.
   - Record the rate on each event (`sample_rate: 20` means "this event stands for 20"), so counts can be re-weighted. Counts from sampled data are estimates.
-- **SLOs and alerts.** Feed them from metrics (RED counters, or [journey metrics](flows.md)), not sampled events.
+- **SLOs and alerts.** Feed them from metrics, the counters behind SLOs (API call RED), not sampled events.
 - **Personal data.** `user.id`, `client.address` and emails are personal data. Hash or drop what you don't need, set a retention period, and never record secrets or tokens.
 - **Cardinality.** High-cardinality fields are fine in event storage (columnar stores are built for them). Don't copy them into metric tags ([dashboards.md](dashboards.md#tagging-and-cardinality)).
 - **Across services.** Each service emits its own event for the same request. To follow a request across services, propagate a trace context (W3C `traceparent`) and query by `trace_id`. A richly tagged APM span *is* a wide event ([reference/datadog/apm.md](reference/datadog/apm.md)).
@@ -192,7 +195,8 @@ Events keep every field, so any metric can be computed from them as a query (an 
 
 ## See also
 
-- [flows.md](flows.md): journey metrics, the cheap counters to alert on.
+- [alerts.md](alerts.md#slo-burn-rate-alerts): the counters behind SLOs (API call RED), the cheap ones to alert on.
+- [flows.md](flows.md): advanced: the same counters across multi-step flows.
 - [reference/datadog/apm.md](reference/datadog/apm.md): the same idea with Datadog APM spans.
 - [dashboards.md](dashboards.md#tagging-and-cardinality): tagging and cardinality.
 

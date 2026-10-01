@@ -10,7 +10,7 @@ TRANSITIONS = [0.9, 0.9, 0.9, 1.0]  # the flows.md example: C ≈ 0.729
 
 
 def noise_vs_variation() -> None:
-	"""σ of C(t) per window vs volume: sampling noise shrinks, real variation doesn't."""
+	"""σ of a success rate per window vs volume: sampling noise shrinks, real variation doesn't."""
 	g = rng()
 	C = math.prod(TRANSITIONS)
 	volumes = np.unique(np.logspace(2, 6, 13).astype(int))
@@ -21,16 +21,16 @@ def noise_vs_variation() -> None:
 	print(f"noise_vs_variation: σ at 100 req {no_jitter[0]:.3f} (no jitter) / {jitter[0]:.3f} (jitter); at 1M {no_jitter[-1]:.4f} / {jitter[-1]:.3f}")
 
 	plt.figure(figsize=(10, 5.5))
-	plt.plot(curve, np.sqrt(C * (1 - C) / curve), color="#1f77b4", linewidth=1.5, label="Sampling noise only: sqrt(C(1−C)/n)")
+	plt.plot(curve, np.sqrt(C * (1 - C) / curve), color="#1f77b4", linewidth=1.5, label="Sampling noise only: sqrt(p(1−p)/n)")
 	plt.plot(volumes, no_jitter, "o", color="#1f77b4", label="Simulated, no real variation")
-	plt.plot(volumes, jitter, "s-", color="#d62728", label="Simulated, T_1–T_3 vary ±0.05 per window (T_4 = 1.0 fixed)")
+	plt.plot(volumes, jitter, "s-", color="#d62728", label="Simulated, underlying rates vary ±0.05 per window")
 	plt.axhline(jitter[-1], color="#d62728", linestyle=":", linewidth=1)
 	plt.annotate(f"Real-variation floor ≈ {jitter[-1]:.3f}:\nmore traffic stops helping", (1e5, jitter[-1]), xytext=(2e4, 0.004), fontsize=9, arrowprops={"arrowstyle": "->"})
 	plt.xscale("log")
 	plt.yscale("log")
 	plt.title("Sampling Noise Shrinks with Volume; Real Variation Doesn't", fontsize=12, fontweight="bold")
 	plt.xlabel("Requests per window (log scale)", fontsize=11)
-	plt.ylabel("σ of C(t) across windows (log scale)", fontsize=11)
+	plt.ylabel("σ of the success rate across windows (log scale)", fontsize=11)
 	plt.grid(alpha=0.3, which="both")
 	plt.legend(fontsize=9, loc="lower left")
 	save("analysis/noise_vs_variation.png")

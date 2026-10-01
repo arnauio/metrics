@@ -96,7 +96,7 @@ def check_numbers() -> list:
 		("analysis.md", "2 \\times 10^{-7}" if round(poisson(0.12, 5), 7) == 2e-7 else "POISSON-0.12-5 CHANGED"),
 		("flows.md", f"about {spill(1, 5):.0%} for a 5-minute window, and about {spill(1, 15):.0%} for 15 minutes"),
 		("flows.md", f"= {0.95 * 0.70 * 0.98 * 0.99:.2f}$$ (65%)"),
-		("kpis.md", f"$$C = {0.80 * 0.95:.2f}$$, a 4-point drop"),
+		("flows.md", f"$$C = {0.80 * 0.95:.2f}$$, a 4-point drop"),
 	]
 	return [f"{doc}: expected to contain {text!r}" for doc, text in claims if text not in docs[doc]]
 

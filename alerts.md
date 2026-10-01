@@ -6,18 +6,17 @@ What deserves a page, and which thresholds catch real problems without paging on
 
 1. **Page only on symptoms users feel, with an action**, because causes need work, not a 3 am wake-up ([why](#what-to-page-on)).
 2. **Burn-rate alerts need a long and a short window**, because the long one shows it matters and the short one clears after the fix ([why](#slo-burn-rate-alerts)).
-3. **Page on journeys with control limits from observed σ**, because their budget is too large for burn rates ([why](#journey-success-rate)).
-4. **Use time-of-week baselines for traffic**, because one μ − 3σ over the week never fires ([why](#traffic-volume)).
-5. **Set capacity thresholds from load tests, per instance**, because μ + 3σ lands past degradation ([why](#threshold-patterns-by-metric-type)).
-6. **At low traffic, require a volume floor or alert on counts**, because one error is a large error rate ([why](#low-traffic)).
-7. **Require the condition to hold** (`for:` or two windows), because per-minute checks multiply false alarms ([why](#durations-windows-and-false-alarms)).
-8. **Treat zero traffic as "no data"**, because `errors / max(requests, 1)` reads 0% during an outage ([why](#durations-windows-and-false-alarms)).
+3. **Use time-of-week baselines for traffic**, because one μ − 3σ over the week never fires ([why](#traffic-volume)).
+4. **Set capacity thresholds from load tests, per instance**, because μ + 3σ lands past degradation ([why](#threshold-patterns-by-metric-type)).
+5. **At low traffic, require a volume floor or alert on counts**, because one error is a large error rate ([why](#low-traffic)).
+6. **Require the condition to hold** (`for:` or two windows), because per-minute checks multiply false alarms ([why](#durations-windows-and-false-alarms)).
+7. **Treat zero traffic as "no data"**, because `errors / max(requests, 1)` reads 0% during an outage ([why](#durations-windows-and-false-alarms)).
 
 ## What to page on
 
 | Signal | Action | Why |
 |---|---|---|
-| Symptoms users feel: journey success, API error rate and latency (levels 2–3, [kpis.md](kpis.md#the-kpi-tree)), via SLO burn rates | **Page** | Users are affected now |
+| Symptoms users feel: key action and API call error rates and latency (level 2, [kpis.md](kpis.md#the-kpi-tree)), via SLO burn rates | **Page** | Users are affected now |
 | Causes and slow risks: saturation, capacity trends, a degrading dependency, slow budget burn | **Ticket** | Needs work, not a 3 am wake-up |
 | Everything else, including most resource metrics | **Dashboard** | Explains alerts; rarely needs to wake anyone |
 
@@ -47,6 +46,7 @@ The SRE Workbook's multiwindow, multi-burn-rate alerts:
 At 14.4× the budget is gone in 50 hours, at 6× in 5 days, at 1× exactly at the end of the period.
 
 - Fire only when **both** windows exceed the burn rate. The short window is 1/12 of the long one.
+
 ![A 2-hour incident at 3% errors: 5-minute and 1-hour error rates against the 14.4× threshold](images/alerts/multiwindow.png)
 
 Simulated 2-hour incident at 3% errors (99.9% SLO). The pair fires 28 minutes in, when the 1-hour rate crosses 1.44%, and clears 2 minutes after the fix. With the 1-hour window alone it would fire 30 minutes longer (hatched).
@@ -80,16 +80,17 @@ groups:
 
 The example counts server-side 5xx for brevity; prefer client or edge counts, which also include timeouts and network failures ([kpis.md](kpis.md#measure-where-the-user-is)).
 
+For a key action's SLO, select its critical-path calls, e.g. with a `key_action="save_document"` label ([kpis.md](kpis.md#1-map-it)).
+
 ## Threshold patterns by metric type
 
 | Metric | Approach | Example | Pitfall |
 |---|---|---|---|
 | **Error rate** | Burn rate on the SLO (above) | 14.4× over 1h and 5m | One error crosses it at [low traffic](#low-traffic) |
 | **Latency** | Burn rate on "fraction slower than X"; or a percentile threshold from histograms, sustained | `histogram_quantile(0.95, …) > 0.2` for 10m | Never mean + 3σ: latency is skewed. A threshold close to the normal p95 flaps. |
-| **Traffic volume** ($$A_1$$ of each key journey, or requests per service) | Time-of-week baseline μ(hour, day) − 3σ(hour, day), drops lasting 5m ([below](#traffic-volume)) | Normal Tuesday 2pm 420 req/s, σ 25 → alert below 345 | One μ and σ over all hours of the week never fires |
+| **Traffic volume** (attempts of each key action, or requests per service) | Time-of-week baseline μ(hour, day) − 3σ(hour, day), drops lasting 5m ([below](#traffic-volume)) | Normal Tuesday 2pm 420 req/s, σ 25 → alert below 345 | One μ and σ over all hours of the week never fires |
 | **Capacity** (CPU, memory, pools) | Load-tested limits, **per instance** | CPU warn 70%, critical 80%; pool warn 75%, critical 90% | μ + 3σ often lands past the point where things degrade. Averaging instances hides one hot instance. |
-| **Journey success rate** $$C(t)$$ | Control limits from the **observed** σ of healthy windows: μ − 3σ ([below](#journey-success-rate)) | μ 0.92, σ 0.015 → alert below 0.875 for 15m | Binomial σ (from volume) fires constantly ([why](analysis.md#sampling-noise-vs-real-variation)) |
-| **Rare events** | Any occurrence, on the counter's increase | `increase(disk_errors_total[10m]) > 0` | `counter > 0` stays true forever after the first event |
+| **Rare events** | Any occurrence, on the counter's increase | `increase(disk_errors_total[10m]) > 0` | `counter > 0` stays true forever after the first event. `increase()` misses the first event when the series first appears at 1: initialise counters at 0 |
 | **Dependencies** | Their SLA plus a margin, sustained | Vendor p95 SLA 800 ms → alert above 1 s for 10m | Don't page on a vendor's normal p99 |
 
 ### Traffic volume
@@ -102,16 +103,11 @@ The example counts server-side 5xx for brevity; prefer client or edge counts, wh
 
 One μ − 3σ over the whole week (μ 199, σ 129) comes out at −188 req/s and can never fire. The time-of-week band, from 6 earlier weeks, sits at about 343 req/s on Tuesday at 2pm and catches the drop to 250. The simulated noise is independent minute to minute, with no week-to-week level shifts, so this band is tighter than real history would give; include real level shifts in yours.
 
-### Journey success rate
-
-- Burn-rate tiers assume a small error budget (targets of 99% and up). A journey's normal failures include abandonment (e.g. $$C ≈ 0.92$$), so its budget is large and a 14.4× burn is impossible.
-- Keep a journey SLO (target from the baseline, failure fraction $$1 - C$$) for reporting only.
-
 ### Static vs dynamic thresholds
 
 - Dynamic (rolling baselines) adapt to growth, but a degraded week becomes the new normal ([analysis.md](analysis.md#baselines-and-seasonality)), and they're harder to debug. Never let one rise above the load-tested limit.
 - Capacity: prefer static thresholds.
-- Ratios without an SLO (journey success, step transitions): fixed control limits from a known-good period, updated deliberately.
+- Ratios without an SLO: fixed control limits from a known-good period, updated deliberately.
 
 ## Low traffic
 
@@ -144,10 +140,10 @@ On healthy traffic (0.02% errors): the rate threshold fires on single errors at 
 ## Durations, windows and false alarms
 
 - **False alarms per day** ≈ false-positive rate per evaluation × evaluations per day.
-  - One-sided 3σ on normal data trips 0.13% of the time ([analysis.md](analysis.md#σ-thresholds-and-what-they-promise)); checked every minute → ~2 false alarms a day.
+  - One-sided 3σ on normal data trips 0.13% of the time ([analysis.md](analysis.md#sigma-thresholds-and-what-they-promise)); checked every minute → ~2 false alarms a day.
 - **Window ≥ 3–5× the period of the noise**: 30 s fluctuations → 1.5–2.5 min window.
 - **`for:` duration by failure speed**: fast, severe → short (pool exhaustion: 1m); slow → longer (CPU warning: 15m).
-- **Zero traffic**: alert separately on no successful requests for 5 minutes while traffic is expected.
+- **Zero traffic**: a ratio over no requests is no data, not 0% ([pitfalls](analysis.md#pitfalls)), so an error-rate rule goes silent during an outage. Alert separately on no successful requests for 5 minutes while traffic is expected.
 
 ## Root-cause (composite) alerts
 
@@ -167,18 +163,17 @@ When a symptom has several known causes, a composite alert can name which:
 ```text
 Alert:     [Service] – [What]
 Threshold: [Current] vs [Expected]
-Impact:    [Journeys / users affected]
+Impact:    [Key actions / users affected]
 Runbook:   [Link]
 Dashboard: [Link, with the time range]
 ```
 
 ## If you have no baseline yet
 
-Start conservative; tune after 1–2 weeks of data:
+Temporary, conservative defaults; replace them with thresholds from 4–8 weeks of history once you have it ([analysis.md](analysis.md#sampling-noise-vs-real-variation)):
 - error rate > 1%
 - p99 latency > 1 s
 - CPU > 80%
-- journey $$C$$ below 80% of its first week's average
 
 ## Checklist
 
