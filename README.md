@@ -26,13 +26,14 @@ One question runs through the guide: **is the product working for users right no
 | 3 | [analysis.md](analysis.md) | How to read the numbers honestly: noise vs real variation, intervals, baselines, and whether a change moved a KPI |
 | 4 | [dashboards.md](dashboards.md) | What to show: the dashboard set, panels, tagging, data sources |
 | 5 | [alerts.md](alerts.md) | What to page on: SLO burn rates, thresholds by metric type, low traffic |
-| 6 | [events.md](events.md) | Where the data comes from: one wide event per unit of work, metrics as projections of it, sampling, trade-offs |
-| 7 | [tools.md](tools.md) | How to apply it to your tools: inventory, limits, translation, gaps; tool pages under `reference/` |
-| 8 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |
+| 6 | [incidents.md](incidents.md) | What to do when it breaks: top-down triage, mitigation, runbooks, post-incident reviews |
+| 7 | [events.md](events.md) | Where the data comes from: one wide event per unit of work, metrics as projections of it, sampling, trade-offs |
+| 8 | [tools.md](tools.md) | How to apply it to your tools: inventory, limits, translation, gaps; tool pages under `reference/` |
+| 9 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |
 
 - **flows.md** builds on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google): request counters per step, window sizing, 22 plots and an OAuth2 case study.
 - **Tool-specific**: dated examples of [tools.md](tools.md) under `reference/`: [Datadog](reference/datadog/datadog.md) (plus [APM enrichment](reference/datadog/apm.md) for a Java service), [Cloudflare Workers](reference/cloudflare/cloudflare.md), [Amplitude](reference/amplitude/amplitude.md), [Kubernetes with Prometheus](reference/kubernetes/kubernetes.md), [Google Cloud](reference/gcp/gcp.md) and [AWS CloudWatch](reference/aws/cloudwatch.md).
-- **Templates**: [templates/kpi-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/kpi-map.yaml): KPIs, key actions, API calls and data sources (multi-step journeys are advanced, see [flows.md](flows.md)), to fill in for a real system. [templates/tool-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/tool-map.yaml): one per tool, its building blocks, limits and gaps.
+- **Templates**: [templates/kpi-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/kpi-map.yaml): KPIs, key actions, API calls and data sources (multi-step journeys are advanced, see [flows.md](flows.md)), to fill in for a real system. [templates/tool-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/tool-map.yaml): one per tool, its building blocks, limits and gaps. [templates/post-incident.md](https://github.com/arnauio/metrics/blob/main/templates/post-incident.md): one per incident, its impact, timeline, causes and follow-ups.
 
 ## Plots and calculator
 

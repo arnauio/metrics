@@ -94,6 +94,8 @@ Percentiles don't subtract: client p95 minus server p95 is only a rough sign.
 
 ### 5. Changes and incidents
 
+The first stop in [triage](incidents.md#triage-top-down) after scoping: what changed when it started.
+
 | Panel | What it shows | Chart |
 |---|---|---|
 | Change timeline | Frontend deploys, backend deploys, migrations, config and flag changes | Timeline |

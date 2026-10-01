@@ -183,6 +183,8 @@ Runbook:   [Link]
 Dashboard: [Link, with the time range]
 ```
 
+What the runbook contains: [incidents.md](incidents.md#what-a-runbook-contains).
+
 ## If you have no baseline yet
 
 Temporary, conservative defaults; replace them with thresholds from 4–8 weeks of history once you have it ([analysis.md](analysis.md#sampling-noise-vs-real-variation)):
