@@ -21,12 +21,13 @@ One question runs through the guide: **is the product working for users right no
 
 | # | Chapter | Answers |
 |---|---|---|
-| 1 | [kpis.md](kpis.md) | What to measure: the KPI tree from business outcomes down to the key actions users take, their API calls and the resources behind them, and how an API call affects a KPI |
-| 2 | [analysis.md](analysis.md) | How to read the numbers honestly: noise vs real variation, intervals, baselines, and whether a change moved a KPI |
-| 3 | [dashboards.md](dashboards.md) | What to show: the dashboard set, panels, tagging, data sources |
-| 4 | [alerts.md](alerts.md) | What to page on: SLO burn rates, thresholds by metric type, low traffic |
-| 5 | [events.md](events.md) | Where the data comes from: one wide event per unit of work, metrics as projections of it, sampling, trade-offs |
-| 6 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |
+| 1 | [signals.md](signals.md) | What the data is: logs, spans and metrics as events, metric types, RED/USE, OpenTelemetry, a short history |
+| 2 | [kpis.md](kpis.md) | What to measure: the KPI tree from business outcomes down to the key actions users take, their API calls and the resources behind them, and how an API call affects a KPI |
+| 3 | [analysis.md](analysis.md) | How to read the numbers honestly: noise vs real variation, intervals, baselines, and whether a change moved a KPI |
+| 4 | [dashboards.md](dashboards.md) | What to show: the dashboard set, panels, tagging, data sources |
+| 5 | [alerts.md](alerts.md) | What to page on: SLO burn rates, thresholds by metric type, low traffic |
+| 6 | [events.md](events.md) | Where the data comes from: one wide event per unit of work, metrics as projections of it, sampling, trade-offs |
+| 7 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |
 
 - **flows.md** builds on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google): request counters per step, window sizing, 22 plots and an OAuth2 case study.
 - **Tool-specific**: [reference/datadog/](reference/datadog/datadog.md): Datadog dashboards and pricing, and APM enrichment for a Java service.

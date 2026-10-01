@@ -6,6 +6,7 @@ Tool-agnostic guides for observability work: choosing KPIs, designing dashboards
 
 | Task | Read | Then | Ask the user for |
 |---|---|---|---|
+| Which signal for what: logs, spans, metrics, metric types, RED/USE, OpenTelemetry | [signals.md](signals.md), [Metric types](signals.md#metric-types) | Explain or choose; put new dimensions on events, alert on counts over all traffic | What they emit today and where it's stored |
 | Choose KPIs for a product or service | [kpis.md: KPI tree](kpis.md#the-kpi-tree), [Level 1](kpis.md#level-1-business-kpis) | Fill in [templates/kpi-map.yaml](templates/kpi-map.yaml): 3–5 business KPIs, each with its key action | Business goals and key actions; existing product analytics |
 | Map key actions to API calls ("how do frontend calls affect KPIs?") | [kpis.md: Connecting the levels](kpis.md#connecting-the-levels-how-an-api-call-affects-a-kpi), [Measure where the user is](kpis.md#measure-where-the-user-is), [What counts as an error](kpis.md#what-counts-as-an-error) | Per key action: the call(s) behind it, critical path yes/no, success condition. Same template | Key actions and endpoints (or read them from the frontend code); which calls block the user |
 | A key action spans several steps (login with OTP, checkout, device flow) | [flows.md: Choosing journeys](flows.md#choosing-journeys), [From flows to metrics](flows.md#from-flows-to-metrics), [Operating journey metrics](flows.md#operating-journey-metrics) | Advanced: count requests per step, alert on journey success with control limits, debug with step ratios | Steps and their endpoints; average time between steps |
@@ -24,7 +25,7 @@ Tool-agnostic guides for observability work: choosing KPIs, designing dashboards
 
 Terms (key action, SLI, SLO, error budget, burn rate, control limits, points): [kpis.md: Glossary](kpis.md#glossary). Journey notation ($A_i$, $T_i$, $C$): [flows.md: From flows to metrics](flows.md#from-flows-to-metrics).
 
-Every guide opens with a `## Rules` section: its summary, with links into the body. When a task only needs the rules, read those first: [kpis](kpis.md#rules) · [analysis](analysis.md#rules) · [dashboards](dashboards.md#rules) · [alerts](alerts.md#rules) · [events](events.md#rules) · [flows](flows.md#rules).
+Every guide opens with a `## Rules` section: its summary, with links into the body. When a task only needs the rules, read those first: [signals](signals.md#rules) · [kpis](kpis.md#rules) · [analysis](analysis.md#rules) · [dashboards](dashboards.md#rules) · [alerts](alerts.md#rules) · [events](events.md#rules) · [flows](flows.md#rules).
 
 ## Rules when applying the guides
 
@@ -58,7 +59,7 @@ uv run src/check.py                             # check docs: links, anchors, qu
 
 | Path | Contents |
 |---|---|
-| `kpis.md` → `analysis.md` → `dashboards.md` → `alerts.md` → `events.md` | The guide's chapters, in reading order; each opens with `## Rules` |
+| `signals.md` → `kpis.md` → `analysis.md` → `dashboards.md` → `alerts.md` → `events.md` | The guide's chapters, in reading order; each opens with `## Rules` |
 | `flows.md` | The advanced chapter: journey metrics worked out in depth, with the plots |
 | `reference/datadog/` | Datadog-specific notes (Java service, AWS); an archive |
 | `templates/` | Fill-in templates |

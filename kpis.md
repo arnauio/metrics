@@ -78,7 +78,7 @@ Plan tier, platform or client, region, new vs returning.
 
 ## Level 2: API call SLIs
 
-RED per call: **R**ate, **E**rror rate, **D**uration (p50, p95, p99). Group the calls by key action ([Map it](#1-map-it)): a key action's attempts, success rate and latency come from its critical-path calls ([defined there](#1-map-it)).
+RED per call: **R**ate, **E**rror rate, **D**uration (p50, p95, p99) ([RED and USE](signals.md#red-use-and-the-golden-signals)). Group the calls by key action ([Map it](#1-map-it)): a key action's attempts, success rate and latency come from its critical-path calls ([defined there](#1-map-it)).
 
 ### Measure where the user is
 
@@ -191,6 +191,7 @@ Write down for every KPI:
 | Points | Percentage points: 80% → 75% is a 5-point drop. |
 | Critical path | The calls a key action can't complete without; the user waits for them. |
 | Wide events | One structured event per request with all its context ([events.md](events.md)). |
+| Span | A wide event with trace IDs, so one request's events can be joined across services ([signals.md](signals.md#spans-and-trace-context)). |
 
 ## References
 

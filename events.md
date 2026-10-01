@@ -209,6 +209,7 @@ Events keep every field, so any metric can be computed from them as a query (an 
 
 ## See also
 
+- [signals.md](signals.md): logs, spans and metrics as events; metric types; OpenTelemetry.
 - [alerts.md](alerts.md#slo-burn-rate-alerts): SLO alerts on the same RED, kept as counters.
 - [flows.md](flows.md): advanced: the same counters across multi-step flows.
 - [reference/datadog/apm.md](reference/datadog/apm.md): the same idea with Datadog APM spans.

@@ -4,6 +4,7 @@
 
 ## Guide
 
+* [Signals: events, spans and metrics](signals.md)
 * [KPIs: what to measure](kpis.md)
 * [Analysis: is this change real, and did it move the KPI?](analysis.md)
 * [Dashboards: what to build](dashboards.md)

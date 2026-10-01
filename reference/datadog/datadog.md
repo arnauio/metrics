@@ -6,6 +6,7 @@ Datadog specifics for an example stack from previous work: a Java service on Kub
 
 | Topic | Doc |
 |---|---|
+| Signals: events, spans, metric types | [signals.md](../../signals.md) |
 | KPIs, from business outcomes down to API calls | [kpis.md](../../kpis.md) |
 | Dashboard set, tagging, cardinality | [dashboards.md](../../dashboards.md) |
 | Burn-rate alerts, thresholds | [alerts.md](../../alerts.md) |
