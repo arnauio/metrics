@@ -36,7 +36,8 @@ def noise_vs_variation() -> None:
 	save("analysis/noise_vs_variation.png")
 
 
-def wilson(p: float, n: np.ndarray, z: float = 1.96) -> tuple:
+def wilson(p: float, n, z: float = 1.96) -> tuple:
+	"""Wilson score interval (low, high) for an observed rate p in n requests."""
 	denom = 1 + z * z / n
 	center = (p + z * z / (2 * n)) / denom
 	margin = z * np.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / denom
@@ -50,8 +51,8 @@ def wilson_vs_simple() -> None:
 	simple = 1.96 * np.sqrt(p * (1 - p) / n)
 	w_low, w_high = wilson(p, n)
 	crossover = 1.96 ** 2 * (1 - p) / p
-	l600, h600 = wilson(p, np.array([600.0]))
-	print(f"wilson_vs_simple: simple interval goes below 0 for n < {crossover:.0f}; Wilson at 600 = [{l600[0]:.2%}, {h600[0]:.2%}]")
+	l600, h600 = wilson(p, 600.0)
+	print(f"wilson_vs_simple: simple interval goes below 0 for n < {crossover:.0f}; Wilson at 600 = [{l600:.2%}, {h600:.2%}]")
 
 	plt.figure(figsize=(10, 5.5))
 	plt.fill_between(n, (p - simple) * 100, (p + simple) * 100, color="#d62728", alpha=0.15, label="Simple interval: p ± 1.96·SE")
@@ -60,8 +61,8 @@ def wilson_vs_simple() -> None:
 	plt.axhline(0, color="#555555", linewidth=0.8)
 	plt.axvline(crossover, color="#d62728", linestyle=":", linewidth=1)
 	plt.annotate(f"Below ~{crossover:.0f} requests the simple\ninterval goes below 0%", (crossover, 0), xytext=(110, -1.9), fontsize=9, arrowprops={"arrowstyle": "->"})
-	plt.plot([600, 600], [l600[0] * 100, h600[0] * 100], color="#1f77b4", linewidth=3)
-	plt.annotate(f"600 requests: Wilson [{l600[0]:.2%}, {h600[0]:.2%}]", (600, h600[0] * 100), xytext=(900, 3.2), fontsize=9, arrowprops={"arrowstyle": "->"})
+	plt.plot([600, 600], [l600 * 100, h600 * 100], color="#1f77b4", linewidth=3)
+	plt.annotate(f"600 requests: Wilson [{l600:.2%}, {h600:.2%}]", (600, h600 * 100), xytext=(900, 3.2), fontsize=9, arrowprops={"arrowstyle": "->"})
 	plt.xscale("log")
 	plt.ylim(-2.5, 6)
 	plt.title("95% Interval for an Observed 1% Error Rate", fontsize=12, fontweight="bold")
@@ -112,11 +113,13 @@ def correlation_trap() -> None:
 	latency = 80 + 60 * traffic + g.normal(0, 6, slot.size)
 
 	def residual(x: np.ndarray) -> np.ndarray:
+		"""x minus its mean at the same time of day."""
 		profile = np.array([x[slot == s].mean() for s in range(slots_per_day)])
 		return x - profile[slot]
 
+	cpu_res, latency_res = residual(cpu), residual(latency)
 	r_raw = np.corrcoef(cpu, latency)[0, 1]
-	r_res = np.corrcoef(residual(cpu), residual(latency))[0, 1]
+	r_res = np.corrcoef(cpu_res, latency_res)[0, 1]
 	print(f"correlation_trap: raw r = {r_raw:.2f}, residual r = {r_res:.2f}")
 
 	fig, (a, b) = plt.subplots(1, 2, figsize=(11, 5))
@@ -124,7 +127,7 @@ def correlation_trap() -> None:
 	a.set_title(f"Raw values: r = {r_raw:.2f}", fontsize=11, fontweight="bold")
 	a.set_xlabel("CPU (%)")
 	a.set_ylabel("p95 latency (ms)")
-	b.scatter(residual(cpu), residual(latency), s=4, alpha=0.4, color="#ff7f0e")
+	b.scatter(cpu_res, latency_res, s=4, alpha=0.4, color="#ff7f0e")
 	b.set_title(f"After removing the daily pattern: r = {r_res:.2f}", fontsize=11, fontweight="bold")
 	b.set_xlabel("CPU minus its usual value at that time of day")
 	b.set_ylabel("Latency minus its usual value at that time of day")

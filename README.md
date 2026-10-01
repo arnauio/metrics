@@ -38,8 +38,8 @@ Requires [uv](https://docs.astral.sh/uv/). From the repo root:
 
 ```sh
 uv run src/plots.py          # regenerate every plot
-uv run src/calc.py --help    # burn-rate thresholds, Wilson intervals, z-tests, sample sizes, Poisson tails, spillover (--json for agents)
-uv run src/check.py          # verify links, anchors, doc numbers and plot reproducibility before committing
+uv run src/calc.py --help    # burn-rate thresholds, Wilson intervals, z-tests, sample sizes, Poisson tails, spillover
+uv run src/check.py          # check links, anchors and the numbers the docs quote
 ```
 
 On the first run, uv creates `.venv` and installs the dependencies from `pyproject.toml` (numpy, matplotlib; Python 3.10+). Plots are seeded, so reruns produce identical images.

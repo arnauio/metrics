@@ -6,8 +6,6 @@ import numpy as np
 
 from common import rng, save
 
-SLO_BUDGET = 0.001  # 99.9% SLO
-
 
 def budget_burn() -> None:
 	"""Error budget remaining over a 30-day period at different burn rates."""
@@ -55,20 +53,15 @@ def multiwindow() -> None:
 	errors = g.binomial(requests, p)
 	r5 = trailing_rate(errors, requests, 5)
 	r60 = trailing_rate(errors, requests, 60)
-	threshold = 14.4 * SLO_BUDGET
+	threshold = 14.4 * 0.001  # 14.4× burn on a 99.9% SLO
 	both = (r5 > threshold) & (r60 > threshold)
-	long_only = r60 > threshold
-	t = np.arange(minutes)
-
-	def span(mask: np.ndarray) -> tuple:
-		idx = np.flatnonzero(mask)
-		return int(idx[0]), int(idx[-1])
-
-	b0, b1 = span(both)
-	l0, l1 = span(long_only)
+	fires = np.flatnonzero(both)
+	b0, b1 = fires[0], fires[-1]
+	l1 = np.flatnonzero(r60 > threshold)[-1]
 	print(f"multiwindow: incident {start}-{end} min; 1h+5m fires {b0 - start} min in, clears {b1 + 1 - end} min after the fix; 1h alone clears {l1 + 1 - end} min after")
 
-	fig, ax = plt.subplots(figsize=(11, 5))
+	t = np.arange(minutes)
+	_, ax = plt.subplots(figsize=(11, 5))
 	ax.axvspan(start, end, color="#dddddd", alpha=0.6, label="Incident: 3% errors")
 	ax.plot(t, r5 * 100, color="#ff7f0e", linewidth=1.2, label="5-minute error rate")
 	ax.plot(t, r60 * 100, color="#1f77b4", linewidth=2, label="1-hour error rate")
@@ -85,19 +78,13 @@ def multiwindow() -> None:
 	save("alerts/multiwindow.png")
 
 
-def week_profile() -> np.ndarray:
-	"""Typical req/s for each minute of a week starting Monday 00:00."""
-	minute = np.arange(7 * 24 * 60)
-	day, hour = minute // 1440, (minute // 60) % 24
-	weekday = day < 5
-	business = weekday & (hour >= 9) & (hour < 17)
-	return np.where(business, 420.0, np.where(weekday, 160.0, 80.0))
-
-
 def traffic_baseline() -> None:
 	"""One threshold for the whole week vs a time-of-week band, on a week with a drop."""
 	g = rng()
-	profile = week_profile()
+	minute = np.arange(7 * 24 * 60)  # from Monday 00:00
+	weekday = minute // 1440 < 5
+	hour = (minute // 60) % 24
+	profile = np.where(weekday & (hour >= 9) & (hour < 17), 420.0, np.where(weekday, 160.0, 80.0))  # typical req/s
 	history = profile * (1 + g.normal(0, 0.06, (6, profile.size)))  # 6 earlier weeks
 	current = profile * (1 + g.normal(0, 0.06, profile.size))
 	drop_start = (24 + 14) * 60  # Tuesday 14:00
@@ -115,7 +102,7 @@ def traffic_baseline() -> None:
 	print(f"traffic_baseline: one threshold μ={flat_mu:.0f} σ={flat_sigma:.0f} → μ−3σ={flat_threshold:.0f}; Tue 2pm μ={tue.mean():.0f} σ={tue.std():.0f} → {tue.mean() - 3 * tue.std():.0f}; drop to 250 below band in {caught.sum()}/30 minutes")
 
 	hours = np.arange(profile.size) / 60
-	fig, ax = plt.subplots(figsize=(12, 5))
+	_, ax = plt.subplots(figsize=(12, 5))
 	ax.plot(hours, current, color="#1f77b4", linewidth=0.6, alpha=0.8, label="This week's traffic")
 	ax.plot(hours, band, color="#2ca02c", linewidth=1.5, label="Time-of-week threshold: μ − 3σ per hour of week (6 weeks)")
 	ax.axhline(max(flat_threshold, 0), color="#d62728", linestyle="--", linewidth=1.5, label=f"One threshold for the whole week: μ − 3σ = {flat_threshold:.0f} req/s (shown at 0)")
@@ -147,16 +134,21 @@ def poisson_tail(lam: float, k: int) -> float:
 def low_traffic() -> None:
 	"""False-alarm chance per window of a rate threshold vs a gated count rule, at a 0.02% baseline."""
 	baseline, rate_threshold = 0.0002, 0.0003
+
+	def rate_alarm(x: int) -> float:
+		"""Chance that more than rate_threshold of x healthy requests fail."""
+		return poisson_tail(baseline * x, math.floor(rate_threshold * x) + 1)
+
 	n = np.unique(np.logspace(2, 5.5, 400).astype(int))
-	rate_rule = np.array([poisson_tail(baseline * x, math.floor(rate_threshold * x) + 1) for x in n])
+	rate_rule = np.array([rate_alarm(x) for x in n])
 	floor = math.ceil(5 / rate_threshold)
 	floored = np.where(n >= floor, rate_rule, np.nan)
 	count_rule = np.array([poisson_tail(baseline * x, 5) if x < 3000 else np.nan for x in n])
 
-	a600 = poisson_tail(baseline * 600, math.floor(rate_threshold * 600) + 1)
-	a_floor = poisson_tail(baseline * floor, math.floor(rate_threshold * floor) + 1)
+	a600 = rate_alarm(600)
+	a_floor = rate_alarm(floor)
 	c3000 = poisson_tail(baseline * 2999, 5)
-	below_1pct = next(int(x) for x in n if x > floor and poisson_tail(baseline * x, math.floor(rate_threshold * x) + 1) < 0.01)
+	below_1pct = next(int(x) for x in n if x > floor and rate_alarm(x) < 0.01)
 	print(f"low_traffic: rate rule at 600 req {a600:.1%}; floor {floor:,} req → {a_floor:.1%}; below 1% from ~{below_1pct:,} req; count rule at 3,000 req {c3000:.3%}")
 
 	plt.figure(figsize=(10, 5.5))

@@ -44,7 +44,7 @@ def critical_path() -> None:
 	usable = max(end for _, _, end, critical in calls if critical)
 	print(f"critical_path: page usable at {usable} ms = 80 + max(200, 100) + 150; comments end at 680 ms")
 
-	fig, ax = plt.subplots(figsize=(10, 4.5))
+	_, ax = plt.subplots(figsize=(10, 4.5))
 	for row, (label, start, end, critical) in enumerate(reversed(calls)):
 		ax.barh(row, end - start, left=start, color="#d62728" if critical else "#bbbbbb", edgecolor="black", linewidth=0.5)
 		ax.text(end + 8, row, f"{end - start} ms", va="center", fontsize=9)

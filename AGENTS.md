@@ -48,9 +48,8 @@ uv run src/calc.py ztest 120 10000 150 10000    # two rates: significant? (sampl
 uv run src/calc.py samples --p 0.01 --e 0.005   # requests needed to measure a rate
 uv run src/calc.py poisson --expected 0.6 --k 5 # chance of k+ events when 0.6 are expected
 uv run src/calc.py spillover --gap 1 --window 5 # share of step counts spilling across windows
-uv run src/calc.py wilson 6 600 --json          # any command, as JSON (--json before or after)
 uv run src/plots.py                             # regenerate all plots
-uv run src/check.py                             # verify docs: links, anchors, numbers, plots
+uv run src/check.py                             # check docs: links, anchors, quoted numbers
 ```
 
 - [templates/kpi-map.yaml](templates/kpi-map.yaml): the structure to fill in when choosing KPIs and mapping key actions to API calls (journeys optional). It's the input a dashboard or hub needs.
