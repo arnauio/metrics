@@ -1,12 +1,12 @@
 # Dashboards: what to build
 
-What should we show, and to whom? Which dashboards, panels and data. Builds on the [KPI tree](kpis.md#the-kpi-tree): the dashboards follow its levels.
+What should we show? Which dashboards, panels and data. Builds on the [KPI tree](kpis.md#the-kpi-tree): the dashboards follow its levels.
 
 ## Rules
 
 1. **One level per dashboard** of the [KPI tree](kpis.md#the-kpi-tree) (business KPIs, API calls, resources; key-action dashboards group the level-2 calls by key action), linked top-down, because on a mixed one a red panel could be a symptom or a cause. Exceptions: the KPI overview and the changes view ([The dashboard set](#the-dashboard-set)).
 2. **Every panel answers a question**, in its subtitle, because a panel nobody can read a question into is noise during an incident; no question → drop the panel.
-3. **Order: status → trend → breakdown** (current value, time series, per-endpoint or per-segment detail), because on-call asks in that order: is anything wrong, since when, where.
+3. **Order: status → trend → breakdown** (current value, time series, per-endpoint or per-segment detail), because whoever is paged asks in that order: is anything wrong, since when, where.
 4. **Rates with denominators**: show volume next to error and success rates, because a count that doubles with traffic isn't an incident ([pitfalls](analysis.md#pitfalls)).
 5. **Percentiles from distributions**: p95 from the histogram of all requests, because an average of per-host or per-endpoint p95s isn't a p95 ([pitfalls](analysis.md#pitfalls)).
 6. **Compare with a baseline** (same window last week, or [control limits](alerts.md#threshold-patterns-by-metric-type)), because a value alone isn't high or low.
@@ -20,7 +20,7 @@ What should we show, and to whom? Which dashboards, panels and data. Builds on t
 A dashboard can only break down by dimensions recorded as tags or fields.
 - **A new dimension goes on the event or span first** ([events.md](events.md)): columnar event stores handle high cardinality. Make it a metric tag only if it's bounded and you must alert or chart on it over all traffic.
 - **Standard tags**: `service`, `env`, `version`, `region`, plus bounded product dimensions such as `platform`, `plan_tier`, `key_action` (the key action a call serves; a call that serves several key actions gets the tag of the one calling it, or is counted in each).
-- **Bounded tags only**: < ~100 values safe, ~1,000 manageable. Series count = *product* of all tags' value counts, and metrics are usually billed per series.
+- **Bounded tags only**: series count = *product* of all tags' value counts, and metrics are usually billed per series, so one tag with many values multiplies every other.
 - **No IDs as metric tags** (`user_id`, `session_id`, `request_id`, IP addresses) → put them on events, spans included ([events.md](events.md#trade-offs)).
 - **Route templates, not paths**: `/api/documents/:id`, not `/api/documents/12345`.
 - **Grouped values**: `status_class:5xx` next to the exact code; `error_type:timeout`, not the error message.
@@ -29,13 +29,13 @@ A dashboard can only break down by dimensions recorded as tags or fields.
 
 ## The dashboard set
 
-| # | Dashboard | Level | Question | Audience |
-|---|---|---|---|---|
-| 1 | KPI overview | 1–2 | "Is the product healthy, and is anything hurting it?" | Everyone; the home page |
-| 2 | Key action (one per key action) | 2 | "Does this key action work, and which call broke?" | On-call, product engineers |
-| 3 | API calls: frontend → backend | 2 | "Which calls are failing or slow, as users see them?" | On-call, backend and frontend |
-| 4 | Dependencies and resources | 3 | "What is limiting the calls?" | On-call, platform |
-| 5 | Changes and incidents | all | "What changed, and what did it do?" | On-call, release owners |
+| # | Dashboard | Level | Question |
+|---|---|---|---|
+| 1 | KPI overview | 1–2 | "Is the product healthy, and is anything hurting it?" |
+| 2 | Key action (one per key action) | 2 | "Does this key action work, and which call broke?" |
+| 3 | API calls: frontend → backend | 2 | "Which calls are failing or slow, as users see them?" |
+| 4 | Dependencies and resources | 3 | "What is limiting the calls?" |
+| 5 | Changes and incidents | all | "What changed, and what did it do?" |
 
 Drill-down: KPI tile (dashboard 1) → its key action (dashboard 2) → the key action's calls (dashboard 3) → their dependencies (dashboard 4). Dashboard 5's change markers overlay all of them.
 

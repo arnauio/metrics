@@ -8,7 +8,7 @@ docs_checked: 2026-01-01
 docs_index: unknown                # docs root or llms.txt
 plan: unknown                      # tier the features below need
 
-building_blocks:                   # tools.md#1-inventory-the-building-blocks
+building_blocks:                   # tools.md#inventory-the-building-blocks
   events: unknown                  # incl. spans and trace context
   metric_types: unknown            # summed across a tag? percentiles merge across instances?
   derived_metrics: unknown         # counted from logs or spans; before sampling?
@@ -16,8 +16,9 @@ building_blocks:                   # tools.md#1-inventory-the-building-blocks
   panels: unknown
   alerts: unknown                  # threshold, AND of conditions, anomaly, composite
   change_markers: unknown
+  agent_access: unknown            # MCP server, API, CLI; read-only scopes? (ai-agents.md#access)
 
-limits:                            # tools.md#2-extract-the-limits
+limits:                            # tools.md#extract-the-limits
   sampling: unknown
   retention: unknown
   delay: unknown
@@ -27,7 +28,7 @@ limits:                            # tools.md#2-extract-the-limits
 
 instrumentation: unknown           # what you must emit yourself, where, with which fields
 
-translation:                       # tools.md#3-translate-each-concept
+translation:                       # tools.md#translate-each-concept
   key_action_sli: unknown
   red_per_call: unknown
   percentiles: unknown
@@ -37,12 +38,12 @@ translation:                       # tools.md#3-translate-each-concept
   baseline_last_week: unknown
   explore_any_field: unknown
 
-gaps:                              # tools.md#4-flag-gaps-and-fallbacks
+gaps:                              # tools.md#flag-gaps-and-fallbacks
   - missing: unknown
     fallback: unknown
     loses: unknown
 
-worked_example:                    # tools.md#5-check-it-with-one-key-action
+worked_example:                    # tools.md#check-it-with-one-key-action
   key_action: unknown              # an id from kpi-map.yaml
   sli_query: unknown
   panel: unknown

@@ -16,6 +16,7 @@ Guides for choosing KPIs, building dashboards, setting alerts and analysing inci
 | Handle an incident, then review it | [incidents.md](incidents.md) |
 | Cut noisy pages | [alerts.md: Reviewing alerts](alerts.md#reviewing-alerts) |
 | Apply all this to our tools | [tools.md](tools.md), and the tool pages under `reference/` |
+| Hand the work to an AI agent | [ai-agents.md](ai-agents.md), then point it at [AGENTS.md](https://github.com/arnauio/metrics/blob/main/AGENTS.md) |
 | Measure a key action that spans several steps (login with a code, checkout) | [flows.md](flows.md) (advanced) |
 | Understand logs, spans and metrics | [signals.md](signals.md) |
 
@@ -46,7 +47,8 @@ One question runs through the guide: **is the product working for users right no
 | 6 | [incidents.md](incidents.md) | When it breaks: triage, runbooks and reviews, at a high level |
 | 7 | [events.md](events.md) | Where the data comes from: one wide event per unit of work, metrics as projections of it, sampling, trade-offs |
 | 8 | [tools.md](tools.md) | How to apply it to your tools: inventory, limits, translation, gaps; tool pages under `reference/` |
-| 9 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |
+| 9 | [ai-agents.md](ai-agents.md) | How an AI agent applies the guides: access, what it may do, what it needs, how it reports |
+| 10 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |
 
 - **flows.md** builds on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google): request counters per step, window sizing, 22 plots and an OAuth2 case study.
 - **Tool-specific**: dated examples of [tools.md](tools.md) under `reference/`: [Datadog](reference/datadog/datadog.md) (plus [APM enrichment](reference/datadog/apm.md) for a Java service), [Cloudflare Workers](reference/cloudflare/cloudflare.md), [Amplitude](reference/amplitude/amplitude.md), [Kubernetes with Prometheus](reference/kubernetes/kubernetes.md), [Google Cloud](reference/gcp/gcp.md) and [AWS CloudWatch](reference/aws/cloudwatch.md).

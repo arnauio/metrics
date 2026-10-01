@@ -18,7 +18,6 @@ business_kpis:
     source: product analytics        # vantage point / system
     segments: [plan_tier, platform]  # bounded dimensions only
     baseline: unknown                # from observed data, not a round number
-    owner: unknown
 
 # Key actions: what a user does for a KPI to move, measured through the API calls on its
 # critical path, as the user sees them (kpis.md#connecting-the-levels-how-an-api-call-affects-a-kpi).
@@ -32,14 +31,18 @@ key_actions:
         critical_path: true          # the key action can't complete without it
       - request: GET /comments
         critical_path: false         # slow or failing degrades the page, doesn't fail the key action
-    kpis:                            # which key action KPIs to track (dashboards.md#2-key-action-one-per-key-action)
+    kpis:                            # which key action KPIs to track (dashboards.md#dashboard-2-key-action-one-per-key-action)
       success_rate: true
       volume: true
       latency_p75_p95: true
     slo:
       sli: successful attempts / attempts over 30 days
       target: unknown                # from the baseline
-    alert: unknown                   # burn rate on the SLO (alerts.md#slo-burn-rate-alerts)
+    traffic: {peak_per_5m: unknown, quietest_per_5m: unknown, peak_per_30m: unknown}
+    alerts:                          # alerts.md#slo-burn-rate-alerts
+      burn_rate_pairs: unknown       # thresholds and short-window floors from `calc.py burn --slo <target>`
+      low_traffic: unknown           # count rule and its gate, for hours below the floor (alerts.md#low-traffic)
+      zero_traffic: unknown          # no successful attempts while traffic is expected
   - id: save_document
     description: save a document
     success: save returns 200 and the document shows as saved
@@ -55,7 +58,11 @@ key_actions:
     slo:
       sli: successful attempts / attempts over 30 days
       target: unknown                # from the baseline
-    alert: unknown
+    traffic: {peak_per_5m: unknown, quietest_per_5m: unknown, peak_per_30m: unknown}
+    alerts:                          # alerts.md#slo-burn-rate-alerts
+      burn_rate_pairs: unknown       # thresholds and short-window floors from `calc.py burn --slo <target>`
+      low_traffic: unknown           # count rule and its gate, for hours below the floor (alerts.md#low-traffic)
+      zero_traffic: unknown          # no successful attempts while traffic is expected
 
 # Level 2: API calls, as the user sees them. One entry per call referenced above.
 api_calls:
@@ -63,8 +70,8 @@ api_calls:
     critical_path_of: [open_document] # key actions it can fail; [] if none
     red_from: client                 # client | edge | server (prefer client or edge)
     latency_percentiles: [p50, p95, p99]
-    slo:
-      availability_target: unknown   # e.g. 99.9 → `uv run src/calc.py burn --slo 99.9`
+    slo:                             # diagnostic only: pages come from the key action's SLO
+      availability_target: unknown
       latency_threshold_ms: unknown  # SLI = share of requests faster than this
   - request: GET /comments
     critical_path_of: []             # degrades open_document, can't fail it

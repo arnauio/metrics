@@ -77,7 +77,7 @@ An event is a set of named fields and values, like a JSON document. The usual si
 | **Golden signals** | Latency, traffic, errors, saturation | User-facing systems | Google SRE book, 2017 |
 
 - **Golden signals = RED + saturation.** In this guide saturation sits with USE, on the resources behind the calls ([kpis.md](kpis.md#level-3-resources)).
-- **RED is a projection of request events**: a counter, an error counter and a duration histogram per call ([kpis.md](kpis.md#measure-where-the-user-is)).
+- **RED is a projection of request events**: one duration histogram per call, whose count gives the rate and, by status, the errors ([kpis.md](kpis.md#measure-where-the-user-is)).
 
 ## A short history
 

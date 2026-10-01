@@ -10,7 +10,7 @@ What deserves a page, and which thresholds catch real problems without paging on
 4. **Set capacity thresholds from load tests, per instance**, because μ + 3σ lands past degradation ([why](#threshold-patterns-by-metric-type)).
 5. **At low traffic, require a volume floor or alert on counts**, because one error is a large error rate ([why](#low-traffic)).
 6. **Require the condition to hold** (`for:` or two windows), because per-minute checks multiply false alarms ([why](#durations-windows-and-false-alarms)).
-7. **Treat zero traffic as "no data"**, because `errors / max(requests, 1)` reads 0% during an outage ([why](#durations-windows-and-false-alarms)).
+7. **Treat zero traffic as "no data", and alert on it separately** (no successful requests while traffic is expected), because `errors / max(requests, 1)` reads 0% during an outage ([why](#durations-windows-and-false-alarms)).
 8. **Set the SLO target from what you've measured**, because a target above it uses up the budget in normal weeks ([why](#choosing-the-slo-target)).
 9. **Review every page monthly**, because the people paged are the people building; a page that needed no action becomes a ticket or goes ([why](#reviewing-alerts)).
 
@@ -61,6 +61,7 @@ Fire only when **both** windows exceed the burn rate. The short window is 1/12 o
 groups:
   - name: api-slo
     rules:
+      # with only a duration histogram, use http_server_request_duration_seconds_count instead
       - record: api:error_ratio:rate5m
         expr: |
           sum(rate(http_requests_total{service="api",code=~"5.."}[5m]))
@@ -81,14 +82,14 @@ groups:
 
 The example counts server-side 5xx for brevity; prefer client or edge counts, which also include timeouts and network failures ([kpis.md](kpis.md#measure-where-the-user-is)).
 
-For a key action's SLO, select its critical-path calls, e.g. with a `key_action="save_document"` label ([kpis.md](kpis.md#map-it)).
+For a key action's SLO, select its critical-path calls, e.g. with a `key_action="save_document"` label. That counts requests, an approximation of attempts; to count attempts, tie the calls with an attempt ID on the wide event ([kpis.md](kpis.md#map-it)).
 
 ## Choosing the SLO target
 
 One target per key action, on its SLI as the user sees it ([kpis.md](kpis.md#measure-where-the-user-is)).
 
 - **Measure first**: the error rate per week over the last 4–8 weeks. The spread between weeks sets your margin ([real variation](analysis.md#sampling-noise-vs-real-variation)); `calc.py wilson` only for weeks with few attempts.
-- **Set it below the worst normal week, with room for incidents**: check the 1× ticket wouldn't have fired in those weeks. No history yet → page on the [conservative thresholds below](#if-you-have-no-baseline-yet) instead, and measure.
+- **Set it below the worst normal week, with room for incidents**: check with daily error rates that the 1× ticket (3 days) wouldn't have fired in those weeks. No history yet → page on the [conservative thresholds below](#if-you-have-no-baseline-yet) instead, and measure.
 - **Tighten it only when users need it**: each extra nine cuts the budget tenfold and raises the volume floor tenfold (`calc.py burn --slo 99.99`: 3,473 requests per 5 minutes), so quiet services stop paging.
 - A key action others depend on (log in) can't have a looser target than theirs.
 
@@ -99,7 +100,7 @@ One target per key action, on its SLI as the user sees it ([kpis.md](kpis.md#mea
 | **Error rate** | Burn rate on the SLO ([above](#slo-burn-rate-alerts)) | 14.4× over 1h and 5m |
 | **Latency** | Burn rate on "fraction slower than X"; or a percentile threshold from histograms, sustained | `histogram_quantile(0.95, …) > 0.2` for 10m |
 | **Traffic volume** | Time-of-week baseline μ(hour, day) − 3σ(hour, day), drops lasting 5m ([below](#traffic-volume)) | Normal Tuesday 2pm 420 req/s, σ 25 → alert below 345 |
-| **Capacity** | Load-tested limits, per instance | CPU warn 70%, critical 80%; pool warn 75%, critical 90% |
+| **Capacity** | Load-tested limits, per instance | Example from a load test: CPU warn 70%, critical 80%; pool warn 75%, critical 90% |
 | **Rare events** | Any occurrence, on the counter's increase | `increase(disk_errors_total[10m]) > 0` |
 | **Dependencies** | Their SLA plus a margin, sustained | Vendor p95 SLA 800 ms → alert above 1 s for 10m |
 
@@ -134,7 +135,7 @@ At 600 requests per window, one error = 0.17%. Two fixes: require enough volume,
 
 Set the floor so the threshold means several errors:
 
-- Minimum requests per evaluation window ≈ 5 / threshold rate (at 0.03% → ~17,000). For a burn-rate pair, apply it to the short window (5m or 30m); `calc.py burn` prints it per pair.
+- Minimum requests per evaluation window ≈ 5 / threshold rate (at 0.03% → ~17,000). For a burn-rate pair, apply it to the short window (5m, 30m or 6h); `calc.py burn` prints it per pair.
 - State when that floor silences the rule (often nights, weekends) and what covers those hours.
 - Leave headroom: a threshold close to the baseline still fires by chance. At a 0.02% baseline, a 0.03% threshold (1.5×) trips ~12% of healthy 17,000-request windows, and below 1% only from ~120,000 requests.
 
@@ -150,10 +151,12 @@ Use this where the expected count is far below the threshold:
     sum(increase(http_requests_total{service="api",code=~"5.."}[15m])) >= 10
     and
     sum(increase(http_requests_total{service="api"}[5m])) < 3000
-  labels: { severity: warning }
+  labels: { severity: page }
 ```
 
 - Safe because at a 0.02% baseline and < 3,000 requests per 5 minutes, a window expects ≤ 0.6 errors; 5 or more happen by chance < 0.04% of the time ([Poisson](analysis.md#formulas)).
+- **Your gate**: λ / your normal error rate, with λ small enough that `calc.py poisson --expected λ --k 5` is rare (λ = 0.6 at a 0.3% rate → 200 requests). Copying 3,000 at a higher rate fires on healthy traffic.
+- **Join it to the burn-rate pair**: set the gate at or above the pair's short-window floor (`calc.py burn`), so one of the two covers every traffic level. If even peak traffic is below the floor, the count rule is your page.
 - Without the traffic gate it fires all day at normal traffic.
 
 <figure><img src="images/alerts/low_traffic.png" alt="Chance a healthy window fires vs requests per window, for a 0.03% rate threshold and the gated count rule"><figcaption><p>On healthy traffic (0.02% errors): the rate threshold fires on single errors at low volume (11% of 600-request windows) and still ~12% of the time at its 16,667-request floor. The count rule stays below 0.04% up to its 3,000-request gate, partly because it's less sensitive (5 errors in 3,000 requests is 0.17%, over 8× the baseline). The curve covers the 5-minute condition; the 15-minute one lowers it further. The sawtooth comes from rounding the threshold to whole errors.</p></figcaption></figure>
@@ -181,6 +184,7 @@ When a symptom has several known causes, a composite alert can name which:
 | latency high **and** DB p95 > 100 ms **and** CPU ≤ 70% | "slow queries" |
 | latency high **and** third-party p95 > 1 s **and** CPU ≤ 70% **and** DB p95 ≤ 100 ms | "vendor" |
 
+- The thresholds are examples; take yours from load tests and baselines.
 - Make conditions complementary (`> 70` vs `≤ 70`) → no gaps.
 - Keep the plain symptom alert too: it fires when no known cause matches.
 
@@ -192,15 +196,16 @@ Threshold: [Current] vs [Expected]
 Impact:    [Key actions / users affected]
 Runbook:   [Link]
 Dashboard: [Link, with the time range]
+Query:     [The SLI query, with the time range]
 ```
 
-What the runbook contains: [incidents.md](incidents.md#what-a-runbook-contains).
+What the runbook contains: [incidents.md](incidents.md#what-a-runbook-contains). The query lets a person or an [agent](ai-agents.md#what-it-needs-from-the-system) start from the data.
 
 ## If you have no baseline yet
 
-Temporary, conservative defaults; replace them with thresholds from 4–8 weeks of history once you have it ([analysis.md](analysis.md#sampling-noise-vs-real-variation)):
+Temporary, conservative starting points, not derived from any data; replace them with thresholds from 4–8 weeks of history once you have it ([analysis.md](analysis.md#sampling-noise-vs-real-variation)):
 
-- error rate > 1%, with a [volume floor](#low-traffic)
+- error rate > 1% over 15 minutes, with at least 500 requests in the window (5 / 1%, [volume floor](#require-enough-volume)); below that, the [count rule](#alert-on-counts-gated-to-low-traffic)
 - p99 latency > 1 s
 - CPU > 80%
 

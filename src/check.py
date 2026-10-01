@@ -41,6 +41,11 @@ def check_links() -> list:
 				errors.append(f"{path.relative_to(ROOT)}: {target}: file not found")
 			elif fragment and dest.suffix == ".md" and fragment not in anchors(dest.read_text()):
 				errors.append(f"{path.relative_to(ROOT)}: {target}: anchor not found")
+	for path in sorted((ROOT / "templates").glob("*.yaml")):
+		for file_part, fragment in re.findall(r"([\w/.-]+\.md)#([\w.-]+)", path.read_text()):
+			dest = ROOT / file_part
+			if not dest.exists() or fragment not in anchors(dest.read_text()):
+				errors.append(f"{path.relative_to(ROOT)}: {file_part}#{fragment}: not found")
 	return errors
 
 

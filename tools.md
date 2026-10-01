@@ -18,7 +18,7 @@ Fill in [templates/tool-map.yaml](https://github.com/arnauio/metrics/blob/main/t
 {% step %}
 #### Inventory the building blocks
 
-The tool's name for: events and spans, metric types (can they be summed across a tag?), metrics derived from logs or spans, the query language, panel types, alert types (threshold, two conditions joined with AND, anomaly, composite) and change markers.
+The tool's name for: events and spans, metric types (can they be summed across a tag?), metrics derived from logs or spans, the query language, panel types, alert types (threshold, two conditions joined with AND, anomaly, composite), change markers, and agent access: MCP server, API or CLI, and whether it has read-only scopes ([ai-agents.md](ai-agents.md#access)).
 {% endstep %}
 
 {% step %}

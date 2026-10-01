@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Tool-agnostic guides for observability work: choosing KPIs, designing dashboards, setting alerts, handling incidents, and analysing whether a change is real. You were probably pointed here to apply them to someone's system. Use this file to find the section you need, and read that section rather than whole files.
+Tool-agnostic guides for observability work: choosing KPIs, designing dashboards, setting alerts, handling incidents, and analysing whether a change is real. You were probably pointed here to apply them to someone's system. Use this file to find the section you need, and read that section rather than whole files. How to act on a real system (access, approvals, reporting): [ai-agents.md](ai-agents.md).
 
 ## Task router
 
@@ -11,7 +11,7 @@ Tool-agnostic guides for observability work: choosing KPIs, designing dashboards
 | Map key actions to API calls ("how do frontend calls affect KPIs?") | [kpis.md: Connecting the levels](kpis.md#connecting-the-levels-how-an-api-call-affects-a-kpi), [Measure where the user is](kpis.md#measure-where-the-user-is), [What counts as an error](kpis.md#what-counts-as-an-error) | Per key action: the call(s) behind it, critical path yes/no, success condition. Same template | Key actions and endpoints (or read them from the frontend code); which calls block the user |
 | A key action spans several steps (login with OTP, checkout, device flow) | [flows.md: Choosing journeys](flows.md#choosing-journeys), [From flows to metrics](flows.md#from-flows-to-metrics), [Operating journey metrics](flows.md#operating-journey-metrics) | Advanced: count requests per step, alert on journey success with control limits, debug with step ratios | Steps and their endpoints; average time between steps |
 | Design dashboards or an observability hub | [dashboards.md: The dashboard set](dashboards.md#the-dashboard-set), [Map to your stack](dashboards.md#map-to-your-stack); if the hub is a static page, [For a static hub](dashboards.md#for-a-static-hub) | Fill the stack map with the user's real sources first; then pick panels per dashboard | Tools per source type (RUM, edge, traces, DB, deploys, analytics); static page or live dashboards |
-| What should page us? Set or review an error-rate or latency alert | [alerts.md: What to page on](alerts.md#what-to-page-on), [SLO burn-rate alerts](alerts.md#slo-burn-rate-alerts), [Threshold patterns](alerts.md#threshold-patterns-by-metric-type), [Reviewing alerts](alerts.md#reviewing-alerts) | `uv run src/calc.py burn --slo <target>`; output rules with the threshold reasoning | SLO target; what counts as an error; traffic per 5 minutes (for the low-traffic floor); latency threshold if there's a latency SLO |
+| What should page us? Set or review an error-rate or latency alert | [alerts.md: What to page on](alerts.md#what-to-page-on), [SLO burn-rate alerts](alerts.md#slo-burn-rate-alerts), [Threshold patterns](alerts.md#threshold-patterns-by-metric-type), [Reviewing alerts](alerts.md#reviewing-alerts) | `uv run src/calc.py burn --slo <target>`; output rules with the threshold reasoning | SLO target; what counts as an error; traffic per 5 and 30 minutes, at peak and at the quietest hour (for the floors and the low-traffic gate); latency threshold if there's a latency SLO |
 | Choose an SLO target | [alerts.md: Choosing the SLO target](alerts.md#choosing-the-slo-target) | Error rate per week over 4–8 weeks; target below the worst normal week, with room for incidents; `calc.py burn --slo <target>` for the volume floor | Attempts and failures per week for each key action, at the client or edge |
 | Alert on traffic, capacity, rare events | [alerts.md: Threshold patterns](alerts.md#threshold-patterns-by-metric-type) | Journeys (advanced): [flows.md: Journey alerts](flows.md#journey-alerts), control limits from observed σ, not burn rates | 4–8 weeks of history at the alert's window; load-test limits for capacity |
 | Alert at low traffic | [alerts.md: Low traffic](alerts.md#low-traffic) | Check false alarms with `calc.py poisson` | Requests per window at the quietest hours; baseline error rate |
@@ -25,14 +25,16 @@ Tool-agnostic guides for observability work: choosing KPIs, designing dashboards
 | Instrument product analytics: event names, properties, identity | [events.md: Product analytics events](events.md#product-analytics-events) | One event per key-action attempt with `outcome`; map charts to the KPIs in the KPI map | The product-analytics tool; key actions; how users log in |
 | High-cardinality debugging, wide events, sampling | [events.md](events.md), [Trade-offs](events.md#trade-offs) | | |
 | Apply the guides to a specific tool (Datadog, Cloudflare, Amplitude, GCP, AWS, Prometheus, ...) | [tools.md](tools.md); the tool's page under `reference/` if there is one (Datadog: APM retention and pricing in [apm.md](reference/datadog/apm.md)) | Fill in [templates/tool-map.yaml](templates/tool-map.yaml) from the vendor's docs or `llms.txt`; never copy another tool's names or limits | Which tools cover which source; plan or tier, if limits depend on it |
+| Set up an agent on our tools, or decide what it may do | [ai-agents.md](ai-agents.md) | Read-only access per source; list what needs human approval | Which tools have an MCP server, API or CLI; who approves writes |
 | Learn journey metrics in depth | [flows.md](flows.md) | The advanced chapter, with plots; not needed for the other chapters | |
 
 Terms (key action, SLI, SLO, error budget, burn rate, control limits, points): [kpis.md: Glossary](kpis.md#glossary). Journey notation ($A_i$, $T_i$, $C$): [flows.md: From flows to metrics](flows.md#from-flows-to-metrics).
 
-Every guide opens with a `## Rules` section: its summary, with links into the body. When a task only needs the rules, read those first: [signals](signals.md#rules) · [kpis](kpis.md#rules) · [analysis](analysis.md#rules) · [dashboards](dashboards.md#rules) · [alerts](alerts.md#rules) · [incidents](incidents.md#rules) · [events](events.md#rules) · [tools](tools.md#rules) · [flows](flows.md#rules).
+Every guide opens with a `## Rules` section: its summary, with links into the body. When a task only needs the rules, read those first: [signals](signals.md#rules) · [kpis](kpis.md#rules) · [analysis](analysis.md#rules) · [dashboards](dashboards.md#rules) · [alerts](alerts.md#rules) · [incidents](incidents.md#rules) · [events](events.md#rules) · [tools](tools.md#rules) · [ai-agents](ai-agents.md#rules) · [flows](flows.md#rules).
 
 ## Rules when applying the guides
 
+- **Read-only by default; a human approves writes that touch production or paging** (rollbacks, flags, alert rules, silences) ([ai-agents.md](ai-agents.md#rules)).
 - **Numbers in the docs are examples.** Compute thresholds, limits and sample sizes from the user's data and SLOs with `src/calc.py`; never copy an example value as if it were theirs.
 - **Show the working.** For every threshold or impact estimate, give the formula, the inputs, and where they came from.
 - **State assumptions** that the method depends on: steady vs changing traffic, independent failures, normal vs skewed data, sampled vs unsampled counts.
@@ -65,7 +67,7 @@ uv run src/check.py                             # check docs: links, anchors, he
 
 | Path | Contents |
 |---|---|
-| `signals.md` → `kpis.md` → `analysis.md` → `dashboards.md` → `alerts.md` → `incidents.md` → `events.md` → `tools.md` | The guide's chapters, in reading order; each opens with `## Rules` |
+| `signals.md` → `kpis.md` → `analysis.md` → `dashboards.md` → `alerts.md` → `incidents.md` → `events.md` → `tools.md` → `ai-agents.md` | The guide's chapters, in reading order; each opens with `## Rules` |
 | `flows.md` | The advanced chapter: journey metrics worked out in depth, with the plots |
 | `reference/<tool>/` | Filled tool maps, each dated: Datadog (with the APM case study), Cloudflare Workers, Amplitude, Kubernetes with Prometheus, Google Cloud, AWS CloudWatch |
 | `templates/` | Fill-in templates: KPI map, tool map, post-incident review |

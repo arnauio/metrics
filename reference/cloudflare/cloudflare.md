@@ -50,8 +50,9 @@ Example key action Save, critical-path call `PUT /documents/:id` ([Map it](../..
 ```js
 const w = ev.logs.map((l) => l.message[0]).find((m) => m?.type === "request") ?? {};
 const status = ev.event?.response?.status ?? 0;
-const failed = !["ok", "canceled"].includes(ev.outcome) || status >= 500 || (w.error && !w.error_expected);
-env.API_SLI.writeDataPoint({ indexes: [w.key_action ?? "unknown"], blobs: [w.route ?? "unknown"], doubles: [failed ? 1 : 0] });
+const canceled = ev.outcome === "canceled"; // the client went away: a timeout or a closed tab
+const failed = canceled || ev.outcome !== "ok" || status >= 500 || (w.error && !w.error_expected);
+env.API_SLI.writeDataPoint({ indexes: [w.key_action ?? "unknown"], blobs: [w.route ?? "unknown"], doubles: [failed ? 1 : 0, canceled ? 1 : 0] });
 ```
 
 ```sql
@@ -59,6 +60,7 @@ SELECT sumIf(_sample_interval, double1 = 0) / SUM(_sample_interval) AS sli, SUM(
 FROM api_sli WHERE index1 = 'save_document' AND timestamp > NOW() - INTERVAL '30' DAY
 ```
 
+- **Canceled** counts as failed, because a client that gave up on a call it waits on saw a timeout ([what counts as an error](../../kpis.md#what-counts-as-an-error)); `double2` keeps it as its own rate, to tell timeouts from other failures.
 - **Panel** ([key action dashboard](../../dashboards.md#dashboard-2-key-action-one-per-key-action)): the same query in Grafana, grouped per 5 minutes, success rate next to attempts.
 - **Page alert**: `uv run src/calc.py burn --slo 99.9` gives threshold = burn rate × (1 − 0.999): 1.44% over 1 h and 5 min, 0.60% over 6 h and 30 min ([burn rates](../../alerts.md#slo-burn-rate-alerts)). A cron Worker runs the query per window and pages when both windows of a pair exceed it.
 - **Zero and low traffic**: no attempts in 5 minutes is no data, not 0%; add a [volume floor](../../alerts.md#require-enough-volume) on the short window.

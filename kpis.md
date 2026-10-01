@@ -78,7 +78,7 @@ Plan tier, platform or client, region, new vs returning.
 
 ## Level 2: API call SLIs
 
-RED per call: **R**ate, **E**rror rate, **D**uration (p50, p95, p99) ([RED and USE](signals.md#red-use-and-the-golden-signals)). Group the calls by key action ([Map it](#map-it)): a key action's attempts, success rate and latency come from its critical-path calls ([defined there](#map-it)).
+RED per call: **R**ate, **E**rror rate, **D**uration (p50, p95, p99) ([RED and USE](signals.md#red-use-and-the-golden-signals)); an SLI is one of these as a fraction of good events, an SLO its target ([glossary](#glossary)). Group the calls by key action ([Map it](#map-it)): a key action's attempts, success rate and latency come from its critical-path calls ([defined there](#map-it)).
 
 ### Measure where the user is
 
@@ -176,7 +176,6 @@ Write down for every KPI:
 - [ ] **Window** (per 5 minutes, daily, weekly cohort)
 - [ ] **Segments**, bounded (plan, platform, region)
 - [ ] **Target or baseline**, from observed data
-- [ ] **Owner**
 
 ## Glossary
 

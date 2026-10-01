@@ -12,6 +12,7 @@
 * [Incidents: triage, runbooks and reviews](incidents.md)
 * [Wide events: one event per unit of work](events.md)
 * [Tools: map the guide onto yours](tools.md)
+* [Agents: running the guide with an AI agent](ai-agents.md)
 * [Journey metrics: flows, users, and requests](flows.md)
 
 ## Reference

@@ -596,7 +596,7 @@ Control charts for $$C(t)$$ and $$T_i(t)$$:
 
 Did an API regression move a journey? Apply the [attribution recipe](analysis.md#did-it-move-the-kpi-an-attribution-recipe) at the journey level:
 - **Place it**: the call is on the critical path of a step → check that step's $$T_i$$, then the journey's $$C$$, then the business KPI.
-- **Test it against real variation**: is the change in $$T_i$$ bigger than its usual week-over-week change in healthy weeks, or than a control segment's? A z-test alone covers sampling noise only. Mann-Whitney on journey latency.
+- **Test it against real variation**: is the change in $$T_i$$ bigger than its usual week-over-week change in healthy weeks, or than a control segment's? A z-test alone covers sampling noise only. For latency, compare the p95 with a bootstrap interval ([analysis.md](analysis.md#formulas)).
 - **Confounders** include a traffic-mix shift: a bot wave lowers ratios without any bug ([Traffic mix](#advanced-notes-optional)).
 - **Size it**: extra failed or abandoned journeys ≈ $$A_1$$ per hour × drop in $$C$$ × duration, with its interval. Business impact = failed journeys × share that never comes back and succeeds.
 
