@@ -5,6 +5,7 @@
 Exits non-zero if anything fails. Run it after editing the docs.
 """
 import collections
+import math
 import re
 import sys
 from pathlib import Path
@@ -71,6 +72,7 @@ def check_numbers() -> list:
 		("alerts.md", f"99.9% SLO: {pct(t999[0], 2)}, {pct(t999[1], 1)}, {pct(t999[2], 1)}"),
 		("alerts.md", f"99.95% SLO: {pct(t9995[0], 2)}, {pct(t9995[1], 2)}, {pct(t9995[2], 2)}"),
 		("alerts.md", f"At 14.4× the budget is gone in {30 * 24 / 14.4:.0f} hours"),
+		("alerts.md", f"{math.ceil(round(5 / (14.4 * 0.0001), 6)):,} requests per 5 minutes"),
 		("alerts.md", "< 0.04%" if poisson_tail(0.6, 5) < 0.0004 else "POISSON-0.6-5 CHANGED"),
 		("analysis.md", f"[{pct(w600[0], 2)}, {pct(w600[1], 2)}]"),
 		("analysis.md", f"interval {pct(w2[0], 0)}–{pct(w2[1], 0)}"),

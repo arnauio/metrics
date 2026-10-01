@@ -11,6 +11,8 @@ What deserves a page, and which thresholds catch real problems without paging on
 5. **At low traffic, require a volume floor or alert on counts**, because one error is a large error rate ([why](#low-traffic)).
 6. **Require the condition to hold** (`for:` or two windows), because per-minute checks multiply false alarms ([why](#durations-windows-and-false-alarms)).
 7. **Treat zero traffic as "no data"**, because `errors / max(requests, 1)` reads 0% during an outage ([why](#durations-windows-and-false-alarms)).
+8. **Set the SLO target from what you've measured**, because a target above it uses up the budget in normal weeks ([why](#choosing-the-slo-target)).
+9. **Review every page monthly**, because the people paged are the people building; a page that needed no action becomes a ticket or goes ([why](#reviewing-alerts)).
 
 ## What to page on
 
@@ -80,6 +82,15 @@ groups:
 The example counts server-side 5xx for brevity; prefer client or edge counts, which also include timeouts and network failures ([kpis.md](kpis.md#measure-where-the-user-is)).
 
 For a key action's SLO, select its critical-path calls, e.g. with a `key_action="save_document"` label ([kpis.md](kpis.md#map-it)).
+
+## Choosing the SLO target
+
+One target per key action, on its SLI as the user sees it ([kpis.md](kpis.md#measure-where-the-user-is)).
+
+- **Measure first**: the error rate per week over the last 4–8 weeks. The spread between weeks sets your margin ([real variation](analysis.md#sampling-noise-vs-real-variation)); `calc.py wilson` only for weeks with few attempts.
+- **Set it below the worst normal week, with room for incidents**: check the 1× ticket wouldn't have fired in those weeks. No history yet → page on the [conservative thresholds below](#if-you-have-no-baseline-yet) instead, and measure.
+- **Tighten it only when users need it**: each extra nine cuts the budget tenfold and raises the volume floor tenfold (`calc.py burn --slo 99.99`: 3,473 requests per 5 minutes), so quiet services stop paging.
+- A key action others depend on (log in) can't have a looser target than theirs.
 
 ## Threshold patterns by metric type
 
@@ -189,9 +200,18 @@ What the runbook contains: [incidents.md](incidents.md#what-a-runbook-contains).
 
 Temporary, conservative defaults; replace them with thresholds from 4–8 weeks of history once you have it ([analysis.md](analysis.md#sampling-noise-vs-real-variation)):
 
-- error rate > 1%
+- error rate > 1%, with a [volume floor](#low-traffic)
 - p99 latency > 1 s
 - CPU > 80%
+
+## Reviewing alerts
+
+Once a month, for the pages of the last 30 days:
+
+- **Needed a human, now?** No → make it a ticket, or delete it.
+- **Missed incidents** (users noticed first): add or tune the alert that should have fired ([post-incident review](incidents.md#post-incident-review)).
+- **Retune** traffic and capacity thresholds against the last 4–8 weeks, and write the date.
+- **Target still right?** Loosen it only if users didn't notice the misses; tighten it only if they did.
 
 ## Checklist
 

@@ -4,7 +4,7 @@
 
 - **Date:** [YYYY-MM-DD]
 - **Severity:** [level]
-- **Coordinator:** [name]
+- **Responders:** [names]
 
 ## Summary
 

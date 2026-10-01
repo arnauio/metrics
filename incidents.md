@@ -6,7 +6,7 @@ What to do when something breaks, at a high level. The other chapters supply the
 
 1. **Mitigate first, find the cause later**, because users feel the impact while you look ([Triage](#triage-top-down)).
 2. **Go down the KPI tree**: key action → its calls → their dependencies, because each level names the next ([Triage](#triage-top-down)).
-3. **One coordinator, one timestamped log**, because whoever debugs loses the overall picture ([Running it](#running-the-incident)).
+3. **When two respond, one fixes and one keeps the log and tells users**, because whoever debugs loses the overall picture ([Running it](#running-the-incident)).
 4. **Every paging alert links a runbook**, because nobody should work out the first step at 3 am ([Runbooks](#what-a-runbook-contains)).
 5. **Review blamelessly, and give each follow-up an owner**, because blame hides what happened ([Review](#post-incident-review)).
 
@@ -20,9 +20,9 @@ What to do when something breaks, at a high level. The other chapters supply the
 
 ## Running the incident
 
-- Declare it early: downgrading is cheaper than finding out late.
-- One coordinator (incident commander) decides and assigns; others debug or send the updates.
-- Keep a log of what was seen, done and decided, with times.
+- Say it's an incident early, in the team channel: downgrading is cheaper than finding out late.
+- With two people: one mitigates and debugs; the other keeps the log and tells affected users. Alone: mitigate first, then post a one-line status.
+- Keep a log of what was seen, done and decided, with times; it becomes the review's timeline.
 - Set severity by user impact, not by cause.
 - Close when the SLI is back to its baseline, not when the fix ships.
 
