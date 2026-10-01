@@ -1,8 +1,8 @@
 # Datadog
 
-Datadog specifics for our stack (a Java service on Kubernetes, on AWS, behind an ALB, using DynamoDB): what to put on which dashboard, how billing works, and where the rest lives.
+Datadog specifics for an example stack from previous work: a Java service on Kubernetes, on AWS, behind an ALB, using DynamoDB. What to put on which dashboard, how billing works, and where the rest lives.
 
-The concepts that apply to any tool are in the references at the repo root ([kpis.md](../../kpis.md), [dashboards.md](../../dashboards.md), [alerts.md](../../alerts.md), [analysis.md](../../analysis.md)). This page maps them to Datadog.
+The concepts that apply to any tool are in [kpis.md](../../kpis.md), [dashboards.md](../../dashboards.md), [alerts.md](../../alerts.md) and [analysis.md](../../analysis.md). This page maps them to Datadog.
 
 ## Where the rest lives
 
@@ -18,7 +18,7 @@ The concepts that apply to any tool are in the references at the repo root ([kpi
 
 ## Dashboards
 
-One dashboard group per layer, following the [dashboard set](../../dashboards.md#the-dashboard-set). RED (Rate, Errors, Duration) applies to request-driven components; USE (Utilization, Saturation, Errors) applies to resources ([kpis.md](../../kpis.md#the-kpi-tree); thresholds in [alerts.md](../../alerts.md#threshold-patterns-by-metric-type)). Each signal below is labelled with its letter.
+One dashboard group per layer, following the [dashboard set](../../dashboards.md#the-dashboard-set). RED (Rate, Errors, Duration) applies to request-driven components; USE (Utilization, Saturation, Errors) applies to resources ([kpis.md](../../kpis.md#the-kpi-tree); thresholds in [alerts.md](../../alerts.md#threshold-patterns-by-metric-type)). Each signal below is labelled with its letter; a dash (—) marks a row that isn't a USE signal of that layer.
 
 Metric names are those of the Datadog Kubernetes, AWS and APM integrations; check them against your account's Metrics Summary.
 
@@ -26,12 +26,12 @@ Metric names are those of the Datadog Kubernetes, AWS and APM integrations; chec
 
 | Signal | Metric |
 |---|---|
-| **U** CPU used vs limit | `kubernetes.cpu.usage.total / (kubernetes.cpu.limits * 1e9)` (usage is in nanocores, limits in cores) |
+| **U** CPU used vs request and limit | `kubernetes.cpu.usage.total / (kubernetes.cpu.requests * 1e9)` and the same over `kubernetes.cpu.limits` (usage is in nanocores, requests and limits in cores). Many teams set no CPU limit; then the request is the only reference |
 | **U** Memory used vs limit | `kubernetes.memory.working_set` vs `kubernetes.memory.limits` (the working set is what the OOM killer compares; `memory.usage` includes page cache) |
-| **S** CPU throttling | `kubernetes.cpu.cfs.throttled.seconds` |
+| **S** CPU throttling | `kubernetes.cpu.cfs.throttled.periods / kubernetes.cpu.cfs.periods`: the share of CFS periods in which the container was throttled (only applies with a CPU limit) |
 | **S** Memory close to limit | the memory ratio above, per pod; OOM kills follow |
 | **E** Container restarts | `kubernetes.containers.restarts` |
-| **E** OOMKilled terminations | `kubernetes_state.container.status_report.count.terminated{reason:oomkilled}` (kube-state-metrics check) |
+| **E** OOMKilled terminations | last terminated reason = OOMKilled (kube-state-metrics), next to restarts. The `terminated` state lasts only until the restart, so a check on it misses most kills |
 
 - **Stability & incidents** view: restarts, OOM kills and crash loops per deployment, with deploy markers.
 - Per-pod request rate isn't a Kubernetes metric. It comes from APM, a service mesh or the ingress (next section).
@@ -63,18 +63,18 @@ Metric names are those of the Datadog Kubernetes, AWS and APM integrations; chec
 - **The error split is the fast triage signal.** Target 5xx means our service returned the error. ELB 5xx (for example 502, 503, 504) means the load balancer couldn't get an answer: no healthy targets, timeouts, connection resets.
 - These are ALB metric names. A Classic ELB uses a different set (`aws.elb.httpcode_backend_5xx`, `aws.elb.httpcode_elb_5xx`, `aws.elb.latency`).
 - The load balancer sees one hop: the time our targets took to respond. Per-hop latency inside the system needs APM.
-- AWS metrics arrive through the CloudWatch integration, several minutes late. For fast alerts, prefer APM trace metrics.
+- AWS metrics arrive through the CloudWatch integration, often 10 minutes or more late with API polling; CloudWatch Metric Streams cut it to a few minutes. For fast alerts, prefer APM trace metrics.
 
 ### Dependencies: DynamoDB, USE
 
 | Signal | Metric |
 |---|---|
 | **S** Throttling (watch first) | `aws.dynamodb.throttled_requests`, `aws.dynamodb.read_throttle_events`, `aws.dynamodb.write_throttle_events` |
-| **U** Consumed vs provisioned capacity | `aws.dynamodb.consumed_read_capacity_units` vs `aws.dynamodb.provisioned_read_capacity_units` (same for writes) |
+| **U** Consumed vs provisioned capacity | `aws.dynamodb.consumed_read_capacity_units` vs `aws.dynamodb.provisioned_read_capacity_units` (same for writes). Consumed is a sum per period, provisioned is per second: divide consumed by the period's seconds before comparing |
 | **E** Server errors, per table and operation | `aws.dynamodb.system_errors` |
 | **E** Client errors, per account and region | `aws.dynamodb.user_errors` |
-| Latency per table and operation | `aws.dynamodb.successful_request_latency` |
-| Growth (planning only) | `aws.dynamodb.item_count`, `aws.dynamodb.table_size` |
+| — Latency per table and operation (the **D** of RED for this dependency, as callers see it) | `aws.dynamodb.successful_request_latency` |
+| — Growth (planning only) | `aws.dynamodb.item_count`, `aws.dynamodb.table_size` |
 
 - **Throttling is the headline signal.** It's what callers feel, and it happens in both capacity modes. Group it by table and operation. `throttled_requests` only counts a batch request when every item in it was throttled, so the read/write throttle events show partial throttling better.
 - **Provisioned vs on-demand.** "Consumed vs provisioned" only applies to provisioned tables. On-demand tables have no provisioned capacity to compare against (at most a configured maximum), but can still throttle, for example on hot partitions or sudden traffic far above the previous peak. For those, watch throttling and consumed capacity alone.
