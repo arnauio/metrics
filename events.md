@@ -1,8 +1,12 @@
 # Wide events: explaining what the metrics show
 
-Metrics detect that something is wrong; wide events explain why. A wide event captures **all the context** about a unit of work (like an HTTP request) in a **single event**, rather than scattering it across log lines. Chapter 5; read [alerts.md](alerts.md) first. Next, [flows.md](flows.md), the advanced chapter on journey metrics.
+Metrics detect that something is wrong; wide events explain why. A wide event captures **all the context** about a unit of work (like an HTTP request) in a **single event**, rather than scattering it across log lines.
 
-> **AI usage:** some examples were generated with AI assistance; validate them against your own context.
+{% hint style="info" %}
+
+**AI usage:** some examples were generated with AI assistance; validate them against your own context.
+
+{% endhint %}
 
 ## Rules
 
@@ -24,7 +28,11 @@ Metrics detect that something is wrong; wide events explain why. A wide event ca
 [2024-01-15 10:23:43] Request completed status=200 request_id=req_789
 ```
 
+{% hint style="warning" %}
+
 **Problem:** context is scattered across lines, and only the first and last carry `request_id`. The middle three can't be tied to this request at all: under load, other requests' lines are interleaved with these. Every question ("which auth methods are slowest for premium users?") needs a join across lines, if it's possible at all.
+
+{% endhint %}
 
 ## The wide event way: one event
 
@@ -83,30 +91,29 @@ Field names follow [OpenTelemetry semantic conventions](https://opentelemetry.io
 
 ## Example 1: successful login
 
-```text
-offset   duration  step
-0ms                request arrives
-2ms      2ms       rate limit check (95/100 remaining)
-4ms      3ms       session cache lookup (miss)
-7ms      18ms      database: load user
-25ms     255ms     password verification (bcrypt)
-280ms    4ms       generate JWT
-286ms              response sent: 200
-```
+| Offset | Duration | Step |
+|---|---|---|
+| 0ms | | Request arrives |
+| 2ms | 2ms | Rate limit check (95/100 remaining) |
+| 4ms | 3ms | Session cache lookup (miss) |
+| 7ms | 18ms | Database: load user |
+| 25ms | 255ms | Password verification (bcrypt) |
+| 280ms | 4ms | Generate JWT |
+| 286ms | | Response sent: 200 |
 
 Everything in that timeline ends up in the event above: one row, queryable on any field.
+
 - "Show me all logins from premium users": `user.tier = premium`
 - "Which auth methods are slowest?": `P99(duration_ms)` grouped by `auth.method`
 - "What's the p99 for password verification?": `P99(auth.duration_ms)` where `auth.method = password`
 
 ## Example 2: failed login (rate limited)
 
-```text
-offset   duration  step
-0ms                request arrives
-1ms      2ms       rate limit check (by client IP): exceeded
-4ms                response sent: 429
-```
+| Offset | Duration | Step |
+|---|---|---|
+| 0ms | | Request arrives |
+| 1ms | 2ms | Rate limit check (by client IP): exceeded |
+| 4ms | | Response sent: 429 |
 
 ```json
 {
@@ -138,6 +145,7 @@ offset   duration  step
 ```
 
 What the event tells you:
+
 - **No `user.*` fields.** The request was rejected before we looked the user up. Absent fields are information too.
 - **A script, not a browser.** `user_agent.original` is `python-requests`. That could be a bot or a legitimate API client; group rate-limited requests by `client.address` to tell a single noisy client from a distributed attack.
 - **`error: true` but `error.expected: true`.** The request failed, but as designed. Decide explicitly how expected errors count ([kpis.md](kpis.md#what-counts-as-an-error)): usually they're excluded from availability SLOs (a 429 means the rate limiter works) but tracked on their own, because a surge in them is still worth knowing about.
@@ -172,6 +180,7 @@ GROUP BY  service.version
 ```
 
 Notes:
+
 - **Rates need a denominator** ([analysis.md](analysis.md#pitfalls)). A rolling-out version's error *count* grows with its traffic even if it's healthy. Compare rates over the same period, with `COUNT` next to them for each version's traffic.
 - **Don't guess which attribute matters.** The third query only checks one flag. To find which attribute explains slow requests, select the slow region of the heatmap and let the tool compare every field's values inside vs outside it: Honeycomb calls this **BubbleUp**; Datadog's closest equivalent is **Watchdog Insights** in Log/Trace Explorer.
 

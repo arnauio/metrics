@@ -13,21 +13,26 @@ The auth service handles password login, OpenID/OAuth social login, one-time tok
 
 ## Cost model
 
-APM is billed per APM host, plus **ingested spans** (by GB) and **indexed spans** (by count, for a retention period). Details in [datadog.md](datadog.md#pricing).
-- Custom tags on spans don't create custom metrics. They add a few bytes to every ingested span, so they're cheap even with high cardinality (`usr.id`).
-- They only become custom metrics if you [generate metrics from spans](#metrics-generated-from-spans). Then cardinality matters again.
+- **Billing.** APM is billed per APM host, plus **ingested spans** (by GB) and **indexed spans** (by count, for a retention period). Details in [datadog.md](datadog.md#pricing).
+- **No new metrics.** Custom tags on spans don't create custom metrics. They add a few bytes to every ingested span, so they're cheap even with high cardinality (`usr.id`).
+- **Unless you turn them into metrics.** They only become custom metrics if you [generate metrics from spans](#metrics-generated-from-spans). Then cardinality matters again.
 
 ## Tags we add
 
+{% hint style="info" %}
+
 Set these on the request's **local root span**, the top-level span for the request in this service. Tagging whatever span is active might put them on a child span (a JDBC query, an HTTP client call), where request-level queries won't find them.
+
+{% endhint %}
 
 | Tag | Values | Notes |
 |---|---|---|
 | `platform` | `web`, `ios`, `android`, `desktop` | Fixed list. "Mobile" = `@platform:(ios OR android)`. |
-| `api_key_id` | the key's ID | **Never the key itself.** Tags are visible to everyone with APM access, so a raw key there is a leaked credential. |
+| `api_key_id` | the key's ID | **Never the key itself** (see below). |
 | `usr.id` | user ID | Datadog's standard user attribute. |
 
-You can search and group by any tag in Trace Explorer without setting anything up. Creating **facets** for `@platform`, `@api_key_id` and `@usr.id` adds them to the facet panel, so you can browse their values.
+- **No raw keys.** Tags are visible to everyone with APM access, so a raw key there is a leaked credential.
+- **Facets are optional.** You can search and group by any tag in Trace Explorer without setting anything up. Creating **facets** for `@platform`, `@api_key_id` and `@usr.id` adds them to the facet panel, so you can browse their values.
 
 ## Java implementation
 
@@ -74,54 +79,63 @@ try (Scope scope = GlobalTracer.get().activateSpan(job.span())) {
 }
 ```
 
----
-
 ## Troubleshooting with enriched traces
 
-Queries use Trace Explorer syntax: custom tags and span attributes take an `@` prefix (`@platform`, `@http.status_code`); reserved attributes (`service`, `resource_name`, `status`) and unified service tags (`env`, `version`) don't.
+- **Syntax.** Queries use Trace Explorer syntax. Custom tags and span attributes take an `@` prefix (`@platform`, `@http.status_code`); reserved attributes (`service`, `resource_name`, `status`) and unified service tags (`env`, `version`) don't.
+- **What counts as an error.** By default, Datadog marks server spans as errors for 5xx responses and for uncaught exceptions. 4xx responses (a wrong password, an expired token) are usually expected, so filter on `@http.status_code` when you want them. Client spans (our calls to other services) default to the opposite: 4xx is an error.
 
-**Which spans a query can find:** for something happening right now, use **Live Search**, which covers every ingested span from the last 15 minutes. Older than that, you only find spans that a [retention filter](#what-datadog-keeps) kept. Error spans are kept by default. For non-error spans, only a sample is kept, so a query for one specific user or key might find few or none of their successful requests unless you add a retention filter for them.
+{% hint style="warning" %}
+
+**Which spans a query can find.** For something happening right now, use **Live Search**, which covers every ingested span from the last 15 minutes. Older than that, you only find spans that a [retention filter](#what-datadog-keeps) kept. Error spans are kept by default. For non-error spans, only a sample is kept, so a query for one specific user or key might find few or none of their successful requests unless you add a retention filter for them.
+
+{% endhint %}
+
+### Users
 
 | Question | Query | Then look at |
 |---|---|---|
 | A user reports an error: what happened? | `service:auth @usr.id:usr_456 status:error` | The trace: endpoint, platform, API key, timing, stack trace |
-| Where does this exception come from? | `service:auth @error.type:java.lang.NullPointerException` | Group by `resource_name`; open a trace for the stack and the upstream calls |
-| Is an API key integration failing? | `service:auth @api_key_id:key_xyz @http.status_code:>=400` | Group by `@error.type`, `resource_name`, `@platform` |
-| A rate-limited key: legitimate or abuse? | `service:auth @api_key_id:key_xyz @http.status_code:429` | Request count over time; unique count of `@usr.id` (one user or many?); `@platform` |
-| Is a key used from an unexpected platform? | `service:auth @api_key_id:web_key @platform:* -@platform:web` | Any hits: misconfiguration or a leaked credential. (`@platform:*` skips spans with no platform tag.) |
-| Which API keys have the slowest auth? | `service:auth @api_key_id:*` | p95 of `@duration` by `@api_key_id`, then by `@platform` for the worst keys |
-| Why is social login slow on mobile, or Android slower than iOS? | `service:auth resource_name:"POST /auth/openid"` | p95 of `@duration` by `@platform`. Spans measure backend time only; client and network latency need RUM. |
 | Password login works but social login fails for one user? | `service:auth @usr.id:usr_456 resource_name:("POST /auth/password" OR "POST /auth/openid")` | Group by `resource_name` and `status`; compare the errors |
-| Device login p99 is spiking: who's affected? | `service:auth resource_name:"POST /auth/device" @duration:>800ms` | Group by `@platform`, `@api_key_id`; unique count of `@usr.id` |
-| Errors on one endpoint: a few users or many? | `service:auth resource_name:"POST /auth/password" @http.status_code:>=500` | Unique count of `@usr.id`: a few = account problem, many = service problem |
-| Did the release break something? | `service:auth @http.status_code:>=500` | Group by `version`, and by `@platform` to see if one client is hit (e.g. iOS device login). For error *rates* by version, use trace metrics (below), which count all traffic. |
 | Is a user stuck polling for an OTT? | `service:auth @usr.id:usr_456 resource_name:"GET /auth/ott/poll"` | Poll count and gaps over time; when polling started |
 
-By default, Datadog marks server spans as errors for 5xx responses and for uncaught exceptions. 4xx responses (a wrong password, an expired token) are usually expected, so filter on `@http.status_code` when you want them. Client spans (our calls to other services) default to the opposite: 4xx is an error.
+### API keys
 
----
+| Question | Query | Then look at |
+|---|---|---|
+| Is an API key integration failing? | `service:auth @api_key_id:key_xyz @http.status_code:>=400` | Group by `@error.type`, `resource_name`, `@platform` |
+| A rate-limited key: legitimate or abuse? | `service:auth @api_key_id:key_xyz @http.status_code:429` | Request count over time; unique count of `@usr.id` (one user or many?); `@platform` |
+| Is a key used from an unexpected platform? | `service:auth @api_key_id:web_key @platform:* -@platform:web` | Any hits: misconfiguration or a leaked credential |
+| Which API keys have the slowest auth? | `service:auth @api_key_id:*` | p95 of `@duration` by `@api_key_id`, then by `@platform` for the worst keys |
+
+- `@platform:*` skips spans with no platform tag.
+
+### Endpoints and releases
+
+| Question | Query | Then look at |
+|---|---|---|
+| Where does this exception come from? | `service:auth @error.type:java.lang.NullPointerException` | Group by `resource_name`; open a trace for the stack and the upstream calls |
+| Why is social login slow on mobile, or Android slower than iOS? | `service:auth resource_name:"POST /auth/openid"` | p95 of `@duration` by `@platform` |
+| Device login p99 is spiking: who's affected? | `service:auth resource_name:"POST /auth/device" @duration:>800ms` | Group by `@platform`, `@api_key_id`; unique count of `@usr.id` |
+| Errors on one endpoint: a few users or many? | `service:auth resource_name:"POST /auth/password" @http.status_code:>=500` | Unique count of `@usr.id`: a few = account problem, many = service problem |
+| Did the release break something? | `service:auth @http.status_code:>=500` | Group by `version`, and by `@platform` to see if one client is hit (e.g. iOS device login) |
+
+- **Spans measure backend time only.** Client and network latency need RUM.
+- **For error *rates* by version**, use [trace metrics](#trace-metrics), which count all traffic.
 
 ## Retention and metrics
 
 ### What Datadog keeps
 
-```text
-100% of requests
-  │
-  ├─► trace metrics (trace.<span>.hits / .errors / latency distribution)
-  │     computed on all traffic, before sampling · kept 15 months
-  │
-  ▼  ingestion sampling (tracer/agent; by default ~10 traces/s per agent, plus errors)
-ingested spans
-  │
-  ├─► Live Search: every ingested span, last 15 minutes
-  ├─► metrics generated from spans: all ingested spans · custom metrics · 15 months
-  │
-  ▼  retention filters
-indexed spans
-  ├─ Error Default filter: status:error spans · 15 days (on by default, billed)
-  ├─ intelligent retention: diversity sample + 1% flat sample · 30 days (not billed)
-  └─ your own filters · 15 days (billed)
+```mermaid
+flowchart TD
+    R["100% of requests"] --> TM["<b>Trace metrics</b><br/>trace.SPAN_NAME.hits / .errors / latency distribution<br/>computed on all traffic, before sampling · kept 15 months"]
+    R -->|"ingestion sampling (tracer/agent)<br/>by default ~10 traces/s per agent, plus errors"| I["<b>Ingested spans</b>"]
+    I --> LS["<b>Live Search</b><br/>every ingested span, last 15 minutes"]
+    I --> GM["<b>Metrics generated from spans</b><br/>all ingested spans · custom metrics · 15 months"]
+    I -->|"retention filters"| X["<b>Indexed spans</b>"]
+    X --> ED["<b>Error Default filter</b><br/>status:error spans · 15 days<br/>on by default, billed"]
+    X --> IR["<b>Intelligent retention</b><br/>diversity sample + 1% flat sample · 30 days<br/>not billed"]
+    X --> OF["<b>Your own filters</b><br/>15 days · billed"]
 ```
 
 - **Ingestion sampling** decides which traces reach Datadog at all. Configure it per service if you need more or fewer traces.
@@ -132,7 +146,11 @@ indexed spans
 
 ### Trace metrics
 
-Every instrumented service gets `trace.<span_name>.hits`, `.errors` and a latency distribution (for example `trace.servlet.request`). They are computed from **all** traffic, before any sampling, kept for 15 months, and don't cost extra. They're tagged by `env`, `service`, `version`, `resource_name`, `http.status_code`, `http.status_class`, host tags and a few configurable primary tags, but not by custom span tags. Use them for RED dashboards and SLOs.
+Every instrumented service gets `trace.<span_name>.hits`, `.errors` and a latency distribution (for example `trace.servlet.request`).
+
+- **All traffic.** They are computed from **all** traffic, before any sampling, kept for 15 months, and don't cost extra.
+- **Fixed tags.** They're tagged by `env`, `service`, `version`, `resource_name`, `http.status_code`, `http.status_class`, host tags and a few configurable primary tags, but not by custom span tags.
+- **Use them** for RED dashboards and SLOs.
 
 ### Metrics generated from spans
 
@@ -152,6 +170,6 @@ Every instrumented service gets `trace.<span_name>.hits`, `.errors` and a latenc
 |---|---|---|
 | "Is the iOS error rate trending up?" RED dashboards, SLOs, capacity | Trace metrics; span-based metrics for custom tags | 15 months |
 | "What's happening right now?" | Live Search | 15 minutes, all ingested spans |
-| "Why did this request fail?" Stack traces, user reproduction | Indexed spans | 15 days for errors and custom filters; 30 days for the intelligent retention sample |
+| "Why did this request fail?" Stack traces, user reproduction | Indexed spans | 15 days (errors, custom filters); 30 days (intelligent retention sample) |
 
 Use metrics to detect a problem, then drill into traces for the cause, while they're still retained.

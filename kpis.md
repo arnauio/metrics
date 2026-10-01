@@ -1,6 +1,6 @@
 # KPIs: what to measure
 
-What should we measure? A product's KPIs, the key actions that move them, and the API calls and resources beneath each. Read this chapter first; next, [analysis.md](analysis.md): whether a change is real.
+What should we measure? A product's KPIs, the key actions that move them, and the API calls and resources beneath each.
 
 ## Rules
 
@@ -14,20 +14,23 @@ What should we measure? A product's KPIs, the key actions that move them, and th
 
 ## The KPI tree
 
-```text
-Level 1  Business KPIs      activation, engagement, conversion, retention     days-weeks, lagging
-             ↑ driven by key actions: log in, save, publish, view a page
-Level 2  API call SLIs      rate, errors, latency per call, as users see them minutes, leading   ← grouped by key action
-             ↑ limited by
-Level 3  Resources          database, workers, queues, caches, third parties  seconds-minutes
-```
+Each level is explained by the one below: business KPIs are driven by key actions (log in, save, publish, view a page), and API calls are limited by resources.
 
-- A business KPI that moved while no key action's calls did is not a reliability problem: look at product changes, marketing, seasonality.
-- Key actions are the bridge: their calls lead (react in minutes) and, grouped by key action, still mean something to the business ("saves are failing"). Use them for alerts, SLOs and incident impact.
-- Business KPIs lag (days to weeks) and are too noisy to alert on → reporting, prioritisation, sizing incident impact.
-- API call SLIs per endpoint mean little to the business alone → alerts (grouped by key action) and diagnosis.
-- Resources → diagnosis and capacity.
+| Level | What | Examples | Reacts in | Use for |
+|---|---|---|---|---|
+| **1. Business KPIs** | Outcomes the business cares about | Activation, engagement, conversion, retention | Days–weeks (lagging) | Reporting, prioritisation, sizing incident impact |
+| **2. API call SLIs** | The calls behind each key action, as users see them | Rate, errors, latency per call | Minutes (leading) | Alerts (grouped by key action), SLOs, incident impact, diagnosis |
+| **3. Resources** | What the calls depend on | Database, workers, queues, caches, third parties | Seconds–minutes | Diagnosis and capacity |
+
+- Key actions are the bridge: their calls lead (react in minutes) and, grouped by key action, still mean something to the business ("saves are failing").
+- Business KPIs are too noisy to alert on; API call SLIs per endpoint mean little to the business alone.
 - Multi-step flows (sign up → verify → first publish) are an advanced topic: [flows.md](flows.md).
+
+{% hint style="warning" %}
+
+A business KPI that moved while no key action's calls did is not a reliability problem: look at product changes, marketing, seasonality.
+
+{% endhint %}
 
 ## Level 1: Business KPIs
 
@@ -42,10 +45,36 @@ Outcomes the business cares about.
 | Retention | Share of a cohort still active N weeks later; churn is the inverse | Weekly, monthly |
 | Revenue | Recurring revenue, expansion, contraction | Monthly |
 
-- Pick 3–5: few enough that each gets its own key action.
-- For each, name its **key action**: what a user must do for the KPI to move ("published their first site", "invited a teammate"). It's measured through the API calls on its **critical path** (the calls it can't complete without, which the user waits for), as the user sees them (level 2).
-- Add the key actions every other one depends on: log in, load the main screen.
-- Segment only by bounded dimensions: plan tier, platform or client, region, new vs returning.
+{% stepper %}
+{% step %}
+
+#### Pick 3–5 KPIs
+
+Few enough that each gets its own key action.
+
+{% endstep %}
+{% step %}
+
+#### Name each one's key action
+
+What a user must do for the KPI to move ("published their first site", "invited a teammate"). It's measured through the API calls on its **critical path** (the calls it can't complete without, which the user waits for), as the user sees them (level 2).
+
+{% endstep %}
+{% step %}
+
+#### Add the shared key actions
+
+The ones every other key action depends on: log in, load the main screen.
+
+{% endstep %}
+{% step %}
+
+#### Segment by bounded dimensions only
+
+Plan tier, platform or client, region, new vs returning.
+
+{% endstep %}
+{% endstepper %}
 
 ## Level 2: API call SLIs
 
@@ -106,6 +135,7 @@ Write this table for each key action; dashboards and impact estimates are built 
 - Non-critical calls degrade it (e.g. a missing comment sidebar) without changing its success rate.
 
 A key action's measures, including when it has several critical-path calls:
+
 - **Attempt**: one try at the key action by a user, counted once even if the client retries a call.
 - **Success rate**: the share of attempts in which every critical-path call succeeded. Measuring it needs the calls tied to their attempt, client-side or with wide events ([events.md](events.md)); per-call success rates are an approximation, and the calls' failure rates roughly add.
 - **Latency**: along the critical path: sequential calls add, parallel ones cost the slowest ([Estimate the effect](#2-estimate-the-effect-on-the-key-action)).
@@ -119,9 +149,7 @@ A key action's measures, including when it has several critical-path calls:
   - Don't assume industry rules of thumb like "100 ms = 1% conversion".
   - Calls the user doesn't wait for (background autosave, prefetch) can't cause abandonment. For those, watch their failures and what they cause instead: unsaved-changes warnings, lost edits, conflicts.
 
-![Waterfall of a page load: critical-path calls in red, non-critical in grey](images/kpis/critical_path.png)
-
-Illustrative page load: it's usable at 430 ms = 80 (session) + 200 (the slower of two parallel calls) + 150 (blocks, which waits for the document). Both parallel calls block the page, but only the slower one sets the time: `/permissions` has 100 ms of slack. The 600 ms comments call ends later but doesn't delay "usable".
+<figure><img src="images/kpis/critical_path.png" alt="Waterfall of a page load: critical-path calls in red, non-critical in grey"><figcaption><p>Illustrative page load: it's usable at 430 ms = 80 (session) + 200 (the slower of two parallel calls) + 150 (blocks, which waits for the document). Both parallel calls block the page, but only the slower one sets the time: /permissions has 100 ms of slack. The 600 ms comments call ends later but doesn't delay "usable".</p></figcaption></figure>
 
 ### 3. Estimate the effect on the KPI
 
@@ -137,6 +165,7 @@ Check the estimate against the KPI with the [attribution recipe](analysis.md#did
 ## KPI definition checklist
 
 Write down for every KPI:
+
 - [ ] **Level** (1–3) and its key action
 - [ ] **Formula**: numerator and denominator
 - [ ] **Source** and vantage point (client, edge, server, product analytics)

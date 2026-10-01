@@ -45,7 +45,9 @@ def anchors(text: str) -> set:
 def check_links() -> list:
 	errors = []
 	for path in markdown_files():
-		for target in re.findall(r"\]\(([^)\s]+)\)", strip_fences(path.read_text())):
+		text = strip_fences(path.read_text())
+		targets = re.findall(r"\]\(([^)\s]+)\)", text) + re.findall(r'<img[^>]*\ssrc="([^"]+)"', text)
+		for target in targets:
 			if target.startswith(("http://", "https://", "mailto:")):
 				continue
 			file_part, _, fragment = target.partition("#")

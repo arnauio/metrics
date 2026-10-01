@@ -1,6 +1,6 @@
 # Alerts: what to page on, and how to set thresholds
 
-What deserves a page, and which thresholds catch real problems without paging on noise? Chapter 4; read [analysis.md](analysis.md) and [dashboards.md](dashboards.md) first. Next, [events.md](events.md) explains why an alert fired. Examples are Prometheus rules with illustrative metric names; the logic fits any backend. Numbers: `uv run src/calc.py burn --slo 99.9`, `poisson`, `wilson` ([analysis.md](analysis.md#formulas)).
+What deserves a page, and which thresholds catch real problems without paging on noise? Examples are Prometheus rules with illustrative metric names; the logic fits any backend. Numbers: `uv run src/calc.py burn --slo 99.9`, `poisson`, `wilson` ([analysis.md](analysis.md#formulas)).
 
 ## Rules
 
@@ -16,22 +16,22 @@ What deserves a page, and which thresholds catch real problems without paging on
 
 | Signal | Action | Why |
 |---|---|---|
-| Symptoms users feel: key action and API call error rates and latency (level 2, [kpis.md](kpis.md#the-kpi-tree)), via SLO burn rates | **Page** | Users are affected now |
-| Causes and slow risks: saturation, capacity trends, a degrading dependency, slow budget burn | **Ticket** | Needs work, not a 3 am wake-up |
-| Everything else, including most resource metrics | **Dashboard** | Explains alerts; rarely needs to wake anyone |
+| **Symptoms users feel** | Page | Users are affected now |
+| **Causes and slow risks** | Ticket | Needs work, not a 3 am wake-up |
+| **Everything else** | Dashboard | Explains alerts; rarely needs to wake anyone |
 
-"Watch it" isn't an action → ticket.
+- **Symptoms users feel**: key action and API call error rates and latency (level 2, [kpis.md](kpis.md#the-kpi-tree)), via SLO burn rates.
+- **Causes and slow risks**: saturation, capacity trends, a degrading dependency, slow budget burn.
+- **Everything else**: includes most resource metrics.
+- "Watch it" isn't an action → ticket.
 
 ## SLO burn-rate alerts
 
-```text
-SLO period:    30 days
-Error budget:  (1 − SLO target) × requests in the period
-               e.g. 99.9% SLO → 0.1% of the period's requests may fail
-Burn rate:     observed error rate / (1 − SLO target)
-               1× = the budget lasts exactly 30 days
-               e.g. 0.5% errors against a 99.9% SLO = 5× → budget gone in 6 days
-```
+| Term | Definition | Example |
+|---|---|---|
+| **SLO period** | 30 days | |
+| **Error budget** | (1 − SLO target) × requests in the period | 99.9% SLO → 0.1% of the period's requests may fail |
+| **Burn rate** | Observed error rate / (1 − SLO target); 1× = the budget lasts exactly 30 days | 0.5% errors against a 99.9% SLO = 5× → budget gone in 6 days |
 
 The SRE Workbook's multiwindow, multi-burn-rate alerts:
 
@@ -41,15 +41,11 @@ The SRE Workbook's multiwindow, multi-burn-rate alerts:
 | Page | 6h | 30m | 6× | 5% | 5 days |
 | Ticket | 3d | 6h | 1× | 10% | 30 days |
 
-![Error budget remaining over 30 days at 0.4×, 1×, 6× and 14.4× burn](images/alerts/budget_burn.png)
+<figure><img src="images/alerts/budget_burn.png" alt="Error budget remaining over 30 days at 0.4×, 1×, 6× and 14.4× burn"><figcaption><p>At 14.4× the budget is gone in 50 hours, at 6× in 5 days, at 1× exactly at the end of the period.</p></figcaption></figure>
 
-At 14.4× the budget is gone in 50 hours, at 6× in 5 days, at 1× exactly at the end of the period.
+Fire only when **both** windows exceed the burn rate. The short window is 1/12 of the long one.
 
-- Fire only when **both** windows exceed the burn rate. The short window is 1/12 of the long one.
-
-![A 2-hour incident at 3% errors: 5-minute and 1-hour error rates against the 14.4× threshold](images/alerts/multiwindow.png)
-
-Simulated 2-hour incident at 3% errors (99.9% SLO). The pair fires 28 minutes in, when the 1-hour rate crosses 1.44%, and clears 2 minutes after the fix. With the 1-hour window alone it would fire 30 minutes longer (hatched).
+<figure><img src="images/alerts/multiwindow.png" alt="A 2-hour incident at 3% errors: 5-minute and 1-hour error rates against the 14.4× threshold"><figcaption><p>Simulated 2-hour incident at 3% errors (99.9% SLO). The pair fires 28 minutes in, when the 1-hour rate crosses 1.44%, and clears 2 minutes after the fix. With the 1-hour window alone it would fire 30 minutes longer (hatched).</p></figcaption></figure>
 
 - Error-rate threshold = burn rate × (1 − target):
   - 99.9% SLO: 1.44%, 0.6%, 0.1%
@@ -84,14 +80,23 @@ For a key action's SLO, select its critical-path calls, e.g. with a `key_action=
 
 ## Threshold patterns by metric type
 
-| Metric | Approach | Example | Pitfall |
-|---|---|---|---|
-| **Error rate** | Burn rate on the SLO (above) | 14.4× over 1h and 5m | One error crosses it at [low traffic](#low-traffic) |
-| **Latency** | Burn rate on "fraction slower than X"; or a percentile threshold from histograms, sustained | `histogram_quantile(0.95, …) > 0.2` for 10m | Never mean + 3σ: latency is skewed. A threshold close to the normal p95 flaps. |
-| **Traffic volume** (attempts of each key action, or requests per service) | Time-of-week baseline μ(hour, day) − 3σ(hour, day), drops lasting 5m ([below](#traffic-volume)) | Normal Tuesday 2pm 420 req/s, σ 25 → alert below 345 | One μ and σ over all hours of the week never fires |
-| **Capacity** (CPU, memory, pools) | Load-tested limits, **per instance** | CPU warn 70%, critical 80%; pool warn 75%, critical 90% | μ + 3σ often lands past the point where things degrade. Averaging instances hides one hot instance. |
-| **Rare events** | Any occurrence, on the counter's increase | `increase(disk_errors_total[10m]) > 0` | `counter > 0` stays true forever after the first event. `increase()` misses the first event when the series first appears at 1: initialise counters at 0 |
-| **Dependencies** | Their SLA plus a margin, sustained | Vendor p95 SLA 800 ms → alert above 1 s for 10m | Don't page on a vendor's normal p99 |
+| Metric | Approach | Example |
+|---|---|---|
+| **Error rate** | Burn rate on the SLO ([above](#slo-burn-rate-alerts)) | 14.4× over 1h and 5m |
+| **Latency** | Burn rate on "fraction slower than X"; or a percentile threshold from histograms, sustained | `histogram_quantile(0.95, …) > 0.2` for 10m |
+| **Traffic volume** | Time-of-week baseline μ(hour, day) − 3σ(hour, day), drops lasting 5m ([below](#traffic-volume)) | Normal Tuesday 2pm 420 req/s, σ 25 → alert below 345 |
+| **Capacity** | Load-tested limits, per instance | CPU warn 70%, critical 80%; pool warn 75%, critical 90% |
+| **Rare events** | Any occurrence, on the counter's increase | `increase(disk_errors_total[10m]) > 0` |
+| **Dependencies** | Their SLA plus a margin, sustained | Vendor p95 SLA 800 ms → alert above 1 s for 10m |
+
+Pitfalls:
+
+- **Error rate**: one error crosses it at [low traffic](#low-traffic).
+- **Latency**: never mean + 3σ, because latency is skewed. A threshold close to the normal p95 flaps.
+- **Traffic volume** (attempts of each key action, or requests per service): one μ and σ over all hours of the week never fires.
+- **Capacity** (CPU, memory, pools): μ + 3σ often lands past the point where things degrade. Averaging instances hides one hot instance.
+- **Rare events**: `counter > 0` stays true forever after the first event. `increase()` misses the first event when the series first appears at 1: initialise counters at 0.
+- **Dependencies**: don't page on a vendor's normal p99.
 
 ### Traffic volume
 
@@ -99,9 +104,7 @@ For a key action's SLO, select its critical-path calls, e.g. with a `key_action=
 - Use every minute in each bucket, not one value per week, so σ has enough samples.
 - One μ and σ for all hours fails: with strong daily and weekly swings, σ exceeds μ/3, so μ − 3σ is below zero.
 
-![One week of traffic with a time-of-week μ − 3σ band and a single weekly μ − 3σ at −188 req/s](images/alerts/traffic_baseline.png)
-
-One μ − 3σ over the whole week (μ 199, σ 129) comes out at −188 req/s and can never fire. The time-of-week band, from 6 earlier weeks, sits at about 343 req/s on Tuesday at 2pm and catches the drop to 250. The simulated noise is independent minute to minute, with no week-to-week level shifts, so this band is tighter than real history would give; include real level shifts in yours.
+<figure><img src="images/alerts/traffic_baseline.png" alt="One week of traffic with a time-of-week μ − 3σ band and a single weekly μ − 3σ at −188 req/s"><figcaption><p>One μ − 3σ over the whole week (μ 199, σ 129) comes out at −188 req/s and can never fire. The time-of-week band, from 6 earlier weeks, sits at about 343 req/s on Tuesday at 2pm and catches the drop to 250. The simulated noise is independent minute to minute, with no week-to-week level shifts, so this band is tighter than real history would give; include real level shifts in yours.</p></figcaption></figure>
 
 ### Static vs dynamic thresholds
 
@@ -111,13 +114,19 @@ One μ − 3σ over the whole week (μ 199, σ 129) comes out at −188 req/s an
 
 ## Low traffic
 
-At 600 requests per window, one error = 0.17%. Two fixes:
+At 600 requests per window, one error = 0.17%. Two fixes: require enough volume, or alert on counts.
 
-1. **Require enough volume** that the threshold means several errors:
-   - minimum requests per evaluation window ≈ 5 / threshold rate (at 0.03% → ~17,000). For a burn-rate pair, apply it to the short window (5m or 30m);
-   - state when that floor silences the rule (often nights, weekends) and what covers those hours;
-   - leave headroom: a threshold close to the baseline still fires by chance. At a 0.02% baseline, a 0.03% threshold (1.5×) trips ~12% of healthy 17,000-request windows, and below 1% only from ~120,000 requests.
-2. **Alert on counts, gated to low traffic**, where the expected count is far below the threshold:
+### Require enough volume
+
+Set the floor so the threshold means several errors:
+
+- Minimum requests per evaluation window ≈ 5 / threshold rate (at 0.03% → ~17,000). For a burn-rate pair, apply it to the short window (5m or 30m).
+- State when that floor silences the rule (often nights, weekends) and what covers those hours.
+- Leave headroom: a threshold close to the baseline still fires by chance. At a 0.02% baseline, a 0.03% threshold (1.5×) trips ~12% of healthy 17,000-request windows, and below 1% only from ~120,000 requests.
+
+### Alert on counts, gated to low traffic
+
+Use this where the expected count is far below the threshold:
 
 ```yaml
 - alert: ErrorsLowTraffic
@@ -133,9 +142,7 @@ At 600 requests per window, one error = 0.17%. Two fixes:
 - Safe because at a 0.02% baseline and < 3,000 requests per 5 minutes, a window expects ≤ 0.6 errors; 5 or more happen by chance < 0.04% of the time ([Poisson](analysis.md#formulas)).
 - Without the traffic gate it fires all day at normal traffic.
 
-![Chance a healthy window fires vs requests per window, for a 0.03% rate threshold and the gated count rule](images/alerts/low_traffic.png)
-
-On healthy traffic (0.02% errors): the rate threshold fires on single errors at low volume (11% of 600-request windows) and still ~12% of the time at its 16,667-request floor. The count rule stays below 0.04% up to its 3,000-request gate, partly because it's less sensitive (5 errors in 3,000 requests is 0.17%, over 8× the baseline). The curve covers the 5-minute condition; the 15-minute one lowers it further. The sawtooth comes from rounding the threshold to whole errors.
+<figure><img src="images/alerts/low_traffic.png" alt="Chance a healthy window fires vs requests per window, for a 0.03% rate threshold and the gated count rule"><figcaption><p>On healthy traffic (0.02% errors): the rate threshold fires on single errors at low volume (11% of 600-request windows) and still ~12% of the time at its 16,667-request floor. The count rule stays below 0.04% up to its 3,000-request gate, partly because it's less sensitive (5 errors in 3,000 requests is 0.17%, over 8× the baseline). The curve covers the 5-minute condition; the 15-minute one lowers it further. The sawtooth comes from rounding the threshold to whole errors.</p></figcaption></figure>
 
 ## Durations, windows and false alarms
 
@@ -143,7 +150,12 @@ On healthy traffic (0.02% errors): the rate threshold fires on single errors at 
   - One-sided 3σ on normal data trips 0.13% of the time ([analysis.md](analysis.md#sigma-thresholds-and-what-they-promise)); checked every minute → ~2 false alarms a day.
 - **Window ≥ 3–5× the period of the noise**: 30 s fluctuations → 1.5–2.5 min window.
 - **`for:` duration by failure speed**: fast, severe → short (pool exhaustion: 1m); slow → longer (CPU warning: 15m).
-- **Zero traffic**: a ratio over no requests is no data, not 0% ([pitfalls](analysis.md#pitfalls)), so an error-rate rule goes silent during an outage. Alert separately on no successful requests for 5 minutes while traffic is expected.
+
+{% hint style="warning" %}
+
+**Zero traffic**: a ratio over no requests is no data, not 0% ([pitfalls](analysis.md#pitfalls)), so an error-rate rule goes silent during an outage. Alert separately on no successful requests for 5 minutes while traffic is expected.
+
+{% endhint %}
 
 ## Root-cause (composite) alerts
 
@@ -171,6 +183,7 @@ Dashboard: [Link, with the time range]
 ## If you have no baseline yet
 
 Temporary, conservative defaults; replace them with thresholds from 4–8 weeks of history once you have it ([analysis.md](analysis.md#sampling-noise-vs-real-variation)):
+
 - error rate > 1%
 - p99 latency > 1 s
 - CPU > 80%

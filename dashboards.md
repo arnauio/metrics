@@ -1,6 +1,6 @@
 # Dashboards: what to build
 
-What should we show, and to whom? Which dashboards, panels and data. Read [analysis.md](analysis.md) and the [KPI tree](kpis.md#the-kpi-tree) first; the dashboards follow its levels. Next, [alerts.md](alerts.md): what to page on.
+What should we show, and to whom? Which dashboards, panels and data. Builds on the [KPI tree](kpis.md#the-kpi-tree): the dashboards follow its levels.
 
 ## Rules
 
@@ -67,12 +67,19 @@ For multi-step flows (funnels, step transitions), see [flows.md](flows.md) (adva
 |---|---|---|
 | Endpoint table | Per endpoint: requests, error rate, p95; client-side and server-side views side by side | Table, sortable |
 | RED per endpoint | Rate, error rate, p50/p95/p99 over time | Time series |
-| Client vs server latency | Network, edge and queueing time: client minus server duration per request, joined on a trace ID (e.g. `traceparent`), then its p95. Percentiles don't subtract: client p95 minus server p95 is only a rough sign | Time series |
-| Client-only failures | Errors the client saw with no matching server error (timeouts, network, CORS). Match by a request or trace ID the client sends (e.g. a `traceparent` header), or compare client and server error counts per endpoint per window | Time series |
+| Client vs server latency | Network, edge and queueing time (see below) | Time series |
+| Client-only failures | Errors the client saw with no matching server error (timeouts, network, CORS) | Time series |
 | Status classes | 2xx / 4xx / 5xx share | Stacked area |
 | Edge | Cache hit rate; edge vs origin time; origin error rate | Time series |
 | Critical path per key page | Calls per view, which block rendering, their waterfall | Waterfall (from a representative trace) |
 | Retries and timeouts | Client retries and timeouts per endpoint | Time series |
+
+- **Client vs server latency**: client minus server duration per request, joined on a trace ID (e.g. `traceparent`), then its p95.
+- **Client-only failures**: match by a request or trace ID the client sends (e.g. a `traceparent` header), or compare client and server error counts per endpoint per window.
+
+{% hint style="warning" %}
+Percentiles don't subtract: client p95 minus server p95 is only a rough sign.
+{% endhint %}
 
 ### 4. Dependencies and resources
 

@@ -26,11 +26,11 @@ One question runs through the guide: **is the product working for users right no
 | 3 | [dashboards.md](dashboards.md) | What to show: the dashboard set, panels, tagging, data sources |
 | 4 | [alerts.md](alerts.md) | What to page on: SLO burn rates, thresholds by metric type, low traffic |
 | 5 | [events.md](events.md) | How to explain what the metrics show: wide events, sampling, trade-offs |
-| 6 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps, building on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google). Request counters per step, window sizing, 22 plots and an OAuth2 case study |
+| 6 | [flows.md](flows.md) | Advanced: journey metrics, for key actions that span several steps |
 
-**Tool-specific**: [reference/datadog/](reference/datadog/datadog.md): Datadog dashboards and pricing, and APM enrichment for a Java service.
-
-**Templates**: [templates/kpi-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/kpi-map.yaml): KPIs, key actions, API calls and data sources (multi-step journeys are advanced, see [flows.md](flows.md)), to fill in for a real system.
+- **flows.md** builds on Google's [journey-based SLIs](https://sre.google/workbook/implementing-slos/#modeling-user-journeys) and [Evolution of SRE at Google](https://www.usenix.org/publications/loginonline/evolution-sre-google): request counters per step, window sizing, 22 plots and an OAuth2 case study.
+- **Tool-specific**: [reference/datadog/](reference/datadog/datadog.md): Datadog dashboards and pricing, and APM enrichment for a Java service.
+- **Templates**: [templates/kpi-map.yaml](https://github.com/arnauio/metrics/blob/main/templates/kpi-map.yaml): KPIs, key actions, API calls and data sources (multi-step journeys are advanced, see [flows.md](flows.md)), to fill in for a real system.
 
 ## Plots and calculator
 
