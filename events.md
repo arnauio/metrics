@@ -17,6 +17,7 @@ A wide event captures **all the context** about a unit of work (like an HTTP req
 5. **Always emit `error` and `error.expected`**, because a filter on a missing field silently drops events ([fields](#the-wide-event-way-one-event)).
 6. **Compare error rates, not counts**, because a version's count grows with its traffic ([queries](#common-queries)).
 7. **Alert on data that counts all traffic**: counters taken before sampling, or sampled events weighted by their sample rate, because unweighted samples undercount and skew towards whatever the sampler keeps ([trade-offs](#trade-offs)).
+8. **Product analytics: one event per key-action attempt, with its outcome as a property**, because then one event answers both the KPI and the success rate as users see it ([product analytics](#product-analytics-events)).
 
 ## The traditional way: multiple log lines
 
@@ -186,6 +187,16 @@ Notes:
 
 - **Rates need a denominator** ([analysis.md](analysis.md#pitfalls)). A rolling-out version's error *count* grows with its traffic even if it's healthy. Compare rates over the same period, with `COUNT` next to them for each version's traffic.
 - **Don't guess which attribute matters.** The third query only checks one flag. To find which attribute explains slow requests, select the slow region of the heatmap and let the tool compare every field's values inside vs outside it: Honeycomb calls this **BubbleUp**; Datadog's closest equivalent is **Watchdog Insights** in Log/Trace Explorer.
+
+## Product analytics events
+
+The same idea, emitted from the client to a product-analytics tool for the [business KPIs](kpis.md#level-1-business-kpis):
+
+- **One event per key-action attempt**, named for the action (`Save Document`, the same name everywhere), with `outcome` (`success` or `error`) and `error.type` as properties. Not one event name per result: `Save Failed 500` can't be grouped.
+- **Event properties** describe this attempt (document type, latency, outcome). **User properties** describe the user now (plan, sign-up date). In B2B, account properties (the tenant) go on a group, if the tool has one.
+- **Identity**: events start under an anonymous device ID; set the user ID at login so the tool merges that history. Use an internal ID, never an email.
+- **Charts to KPIs**: a funnel for activation and conversion, a retention chart for retention, event counts per active user for engagement; cohorts by sign-up week.
+- **Report, don't page**: these tools often count unique users, can lag by minutes or more, and lose events to ad blockers and closed tabs ([kpis.md](kpis.md#measure-where-the-user-is)). Multi-step journeys counted over requests instead of users: [flows.md](flows.md#when-this-approach-fits).
 
 ## Trade-offs
 
